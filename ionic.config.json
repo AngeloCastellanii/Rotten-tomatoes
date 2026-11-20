@@ -1,0 +1,7 @@
+{
+  "name": "Rotten Tomatoes",
+  "integrations": {
+    "capacitor": {}
+  },
+  "type": "angular-standalone"
+}
