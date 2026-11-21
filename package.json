@@ -29,6 +29,7 @@
     "@angular/forms": "22.2.6",
     "@angular/platform-browser": "22.2.6",
     "@angular/router": "22.2.6",
+    "@capacitor/android": "8.6.2",
     "@capacitor/app": "^8.1.2",
     "@capacitor/core": "^8.6.2",
     "@capacitor/haptics": "^8.0.2",
@@ -61,5 +62,5 @@
     "vitest": "^5.1.0"
   },
   "prettier": "@ionic/prettier-config",
-  "description": "Rotten Tomatoes"
+  "description": "Rotten Potatoes"
 }

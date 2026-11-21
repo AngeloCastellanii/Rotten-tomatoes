@@ -1,4 +1,4 @@
-# App Rotten Tomatoes (Ionic + Angular)
+# App Rotten Potatoes (Ionic + Angular)
 
 App Ionic + Angular en esta carpeta, con Supabase propio, catálogo real desde TMDB y APK de depuración. El código de la app no menciona commits ni fases.
 
@@ -15,8 +15,9 @@ Stack: Ionic 9, Angular 22, Capacitor 8. Solo pnpm. `.npmrc` con `node-linker=ho
 - Filtros de nombre, género (acción, drama, misterio), año y puntaje mínimo. Orden por puntaje del público, de críticos o por fecha.
 - Ficha con carátula, sinopsis, fecha, reparto, duración, idioma y los tres puntajes.
 - Reseñas: una por usuario y título, crear, editar y borrar. El rol separa el promedio del público y el de críticos.
+- APK de depuración en `releases/rotten-tomatoes.apk`.
 
-Antes de probar: crea un proyecto Supabase nuevo, corre `supabase/schema.sql`, desactiva Confirm email, y llena `.env` con `SUPABASE_URL`, `SUPABASE_ANON_KEY` y `TMDB_API_KEY`. Luego `pnpm start`.
+Antes de probar: crea un proyecto Supabase nuevo, corre `supabase/schema.sql`, desactiva Confirm email, y llena `.env` con `SUPABASE_URL`, `SUPABASE_ANON_KEY` y `TMDB_API_KEY`. Luego `pnpm start`. Si el SQL ya estaba aplicado, vuelve a ejecutarlo: ahora la base también rechaza nombres, correos y puntajes fuera de rango.
 
 Angular 22 exige Node `^22.22.3 || ^24.15.0 || >=26`. El Node del sistema es 24.14.1 y no alcanza. Hay un Node 24.22.3 portable en `%LOCALAPPDATA%\node-v24.22.3-win-x64`. Hay que tenerlo al frente del `PATH` antes de `pnpm start` o `pnpm run build`.
 
@@ -59,17 +60,9 @@ Al abrir un resultado de TMDB que no está en `titles`, se guarda y después la 
 
 ## APK
 
-En esta máquina hay JDK 25 y no hay Android SDK. Gradle de Capacitor 8 no corre en JDK 25: hace falta JDK 21 y SDK (cmdline-tools, platform 36, build-tools). `JAVA_HOME` y `ANDROID_HOME` solo en esa sesión.
+El instalable de depuración está en `releases/rotten-tomatoes.apk`. No está firmado para Play Store. `local.properties` no se commitea.
 
-La ruta del proyecto tiene espacios. El `assembleDebug` se lanza desde una unidad `subst` corta. El APK queda en `releases/rotten-tomatoes.apk`. Es debug, instalable, no firmado para Play Store. `local.properties` no se commitea.
-
-## Siguiente
-
-1. APK de Android.
-
-```bash
-git commit -m "Generar APK de Android"
-```
+Gradle de Capacitor 8 usa JDK 21. En esta máquina el JDK del sistema es 25; el 21 portable quedó en `%LOCALAPPDATA%\jdk-21`. El SDK está en `%LOCALAPPDATA%\Android\Sdk`. La ruta del proyecto tiene espacios, así que `assembleDebug` se lanza desde una unidad `subst` corta.
 
 Subir, cuando exista remote:
 

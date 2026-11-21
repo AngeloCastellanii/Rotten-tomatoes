@@ -12,6 +12,8 @@
       labelPlacement="stacked"
       autocomplete="name"
       fill="outline"
+      minlength="2"
+      maxlength="60"
       formControlName="name"
     ></ion-input>
     <ion-input
@@ -21,6 +23,7 @@
       inputmode="email"
       autocomplete="email"
       fill="outline"
+      maxlength="254"
       formControlName="email"
     ></ion-input>
     <ion-input
@@ -29,6 +32,9 @@
       type="password"
       autocomplete="new-password"
       fill="outline"
+      minlength="6"
+      maxlength="72"
+      helperText="Mínimo 6 caracteres."
       formControlName="password"
     ></ion-input>
     <ion-segment [value]="role()" (ionChange)="onRole($event)">

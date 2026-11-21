@@ -5,7 +5,8 @@ import { mapProfile } from './mappers';
 import type { ActionResult, Profile, UserRole } from './models';
 import { isSupabaseConfigured, supabase } from './supabase';
 import { normalizeText } from './text';
-import { validateEmail, validateName, validatePassword, validateRole } from './validation';
+import { clipText, validateEmail, validateName, validatePassword, validateRole } from './validation';
+import { LIMITS } from './limits';
 
 const CONFIG_ERROR =
   'Supabase no está configurado. Crea un archivo .env con SUPABASE_URL y SUPABASE_ANON_KEY y vuelve a iniciar la app.';
@@ -151,7 +152,11 @@ export class AuthService {
   }
 
   async logout(): Promise<void> {
-    await supabase.auth.signOut();
+    try {
+      await supabase.auth.signOut();
+    } catch {
+      // La sesión local se cierra igual si el servidor no responde.
+    }
     this.user.set(null);
   }
 
@@ -185,6 +190,7 @@ export class AuthService {
     const email = normalizeText(input.email).toLowerCase();
     const role: UserRole = input.role;
 
+    try {
     if (input.password && input.password.length > 0) {
       const passwordCheck = validatePassword(input.password);
       if (!passwordCheck.ok) {
@@ -229,6 +235,9 @@ export class AuthService {
     }
     this.user.set(profile);
     return { ok: true };
+    } catch (error) {
+      return { ok: false, error: mapAuthError(error) };
+    }
   }
 
   async deleteAccount(): Promise<ActionResult> {
@@ -236,13 +245,17 @@ export class AuthService {
     if (!current) {
       return { ok: false, error: 'No hay sesión activa.' };
     }
-    const { error } = await supabase.rpc('delete_own_account');
-    if (error) {
+    try {
+      const { error } = await supabase.rpc('delete_own_account');
+      if (error) {
+        return { ok: false, error: mapAuthError(error) };
+      }
+      await supabase.auth.signOut({ scope: 'local' });
+      this.user.set(null);
+      return { ok: true };
+    } catch (error) {
       return { ok: false, error: mapAuthError(error) };
     }
-    await supabase.auth.signOut({ scope: 'local' });
-    this.user.set(null);
-    return { ok: true };
   }
 
   private async bootstrap(): Promise<void> {
@@ -269,6 +282,8 @@ export class AuthService {
         }
         void this.loadProfile(session.user.id, session.user.email ?? '', session.user.user_metadata);
       });
+    } catch {
+      this.user.set(null);
     } finally {
       this.loading.set(false);
     }
@@ -279,7 +294,8 @@ export class AuthService {
     email: string,
     metadata: Record<string, unknown> | undefined,
   ): Promise<void> {
-    const name = typeof metadata?.['name'] === 'string' ? metadata['name'] : email.split('@')[0];
+    const rawName = typeof metadata?.['name'] === 'string' ? metadata['name'] : email.split('@')[0];
+    const name = validateName(rawName).ok ? normalizeText(rawName) : 'Usuario';
     const role = metadata?.['role'] === 'critic' ? 'critic' : 'audience';
     const profile = (await this.fetchProfile(id)) ?? (await this.ensureProfile({ id, name, email, role }));
     this.user.set(profile);
@@ -307,7 +323,7 @@ export class AuthService {
       .from('profiles')
       .insert({
         id: input.id,
-        name: input.name,
+        name: validateName(input.name).ok ? clipText(input.name, LIMITS.name.max) : 'Usuario',
         email: input.email,
         role: input.role,
       })

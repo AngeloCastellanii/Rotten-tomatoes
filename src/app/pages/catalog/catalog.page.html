@@ -10,6 +10,7 @@
       <ion-searchbar
         [value]="query()"
         placeholder="Nombre de la película o serie"
+        [attr.maxlength]="limits.search.max"
         [debounce]="0"
         (ionInput)="onQuery($event)"
         (keyup.enter)="search()"
@@ -36,8 +37,9 @@
     <ion-input
       label="Año de estreno"
       labelPlacement="stacked"
-      type="number"
+      type="text"
       inputmode="numeric"
+      [maxlength]="4"
       fill="outline"
       [value]="year()"
       (ionInput)="onYear($event)"
@@ -101,7 +103,7 @@
         <ion-item button [routerLink]="['/tabs/title', title.id]">
           <ion-thumbnail slot="start">
             @if (title.posterUrl) {
-              <img [src]="title.posterUrl" [alt]="'Carátula de ' + title.name" />
+              <img [src]="title.posterUrl" [alt]="'Carátula de ' + title.name" (error)="hideBroken($event)" />
             }
           </ion-thumbnail>
           <ion-label>

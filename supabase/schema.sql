@@ -1,4 +1,4 @@
--- Rotten Tomatoes · esquema Supabase
+-- Rotten Potatoes · esquema Supabase
 -- 1) Crea un proyecto nuevo en https://supabase.com (no uses el de recetas)
 -- 2) SQL Editor → pega este archivo → Run
 -- 3) Authentication → Providers → Email → desactiva "Confirm email"
@@ -68,7 +68,13 @@ begin
   insert into public.profiles (id, name, email, role)
   values (
     new.id,
-    coalesce(new.raw_user_meta_data->>'name', split_part(new.email, '@', 1)),
+    case
+      when char_length(btrim(coalesce(new.raw_user_meta_data->>'name', ''))) between 2 and 60
+        then btrim(new.raw_user_meta_data->>'name')
+      when char_length(split_part(coalesce(new.email, ''), '@', 1)) between 2 and 60
+        then split_part(new.email, '@', 1)
+      else 'Usuario'
+    end,
     new.email,
     case
       when new.raw_user_meta_data->>'role' = 'critic' then 'critic'
@@ -228,3 +234,33 @@ create policy "reviews_delete_own" on public.reviews
 grant select, insert, update on public.profiles to authenticated;
 grant select, insert on public.titles to authenticated;
 grant select, insert, update, delete on public.reviews to authenticated;
+
+alter table public.profiles drop constraint if exists profiles_name_len;
+alter table public.profiles
+  add constraint profiles_name_len check (char_length(btrim(name)) between 2 and 60);
+
+alter table public.profiles drop constraint if exists profiles_email_len;
+alter table public.profiles
+  add constraint profiles_email_len check (
+    char_length(btrim(email)) between 6 and 254
+    and position('@' in email) > 1
+  );
+
+alter table public.titles drop constraint if exists titles_name_len;
+alter table public.titles
+  add constraint titles_name_len check (char_length(btrim(name)) between 1 and 200);
+
+alter table public.titles drop constraint if exists titles_tmdb_id_positive;
+alter table public.titles
+  add constraint titles_tmdb_id_positive check (tmdb_id > 0);
+
+alter table public.titles drop constraint if exists titles_scores_range;
+alter table public.titles
+  add constraint titles_scores_range check (
+    (tmdb_score is null or (tmdb_score >= 0 and tmdb_score <= 10))
+    and (audience_score is null or (audience_score >= 0 and audience_score <= 100))
+    and (critic_score is null or (critic_score >= 0 and critic_score <= 100))
+    and audience_count >= 0
+    and critic_count >= 0
+    and (runtime_minutes is null or (runtime_minutes >= 0 and runtime_minutes <= 2000))
+  );

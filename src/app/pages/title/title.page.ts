@@ -21,10 +21,12 @@ import {
 } from '@ionic/angular';
 
 import { AuthService } from '../../core/auth.service';
-import { dateLabel, languageLabel, mediaLabel, roleLabel, runtimeLabel, scoreLabel } from '../../core/display';
+import { dateLabel, hideBrokenImage, languageLabel, mediaLabel, roleLabel, runtimeLabel, scoreLabel } from '../../core/display';
+import { LIMITS } from '../../core/limits';
 import type { Review, Title } from '../../core/models';
 import { ReviewsService } from '../../core/reviews.service';
 import { TitlesService } from '../../core/titles.service';
+import { clampScore } from '../../core/validation';
 
 @Component({
   selector: 'app-title',
@@ -64,6 +66,8 @@ export class TitlePage {
   readonly body = signal('');
   readonly score = signal(70);
 
+  readonly limits = LIMITS;
+  readonly hideBroken = hideBrokenImage;
   readonly scoreText = scoreLabel;
   readonly dateText = dateLabel;
   readonly runtimeText = runtimeLabel;
@@ -78,13 +82,13 @@ export class TitlePage {
   }
 
   onBody(event: Event): void {
-    const value = (event as CustomEvent<{ value?: string | null }>).detail.value;
-    this.body.set(value ?? '');
+    const value = (event as CustomEvent<{ value?: string | null }>).detail.value ?? '';
+    this.body.set(value.slice(0, LIMITS.review.max));
   }
 
   onScore(event: Event): void {
     const value = (event as CustomEvent<{ value?: number }>).detail.value;
-    this.score.set(typeof value === 'number' ? Math.round(value) : 0);
+    this.score.set(clampScore(typeof value === 'number' ? value : 0));
   }
 
   ownReview(): Review | null {

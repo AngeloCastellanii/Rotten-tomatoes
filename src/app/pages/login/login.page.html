@@ -14,6 +14,7 @@
       inputmode="email"
       autocomplete="email"
       fill="outline"
+      maxlength="254"
       formControlName="email"
     ></ion-input>
     <ion-input
@@ -22,6 +23,8 @@
       type="password"
       autocomplete="current-password"
       fill="outline"
+      minlength="6"
+      maxlength="72"
       formControlName="password"
     ></ion-input>
     @if (error()) {

@@ -28,6 +28,10 @@ export const routes: Routes = [
         redirectTo: '/tabs/catalog',
         pathMatch: 'full',
       },
+      {
+        path: '**',
+        redirectTo: 'catalog',
+      },
     ],
   },
   {

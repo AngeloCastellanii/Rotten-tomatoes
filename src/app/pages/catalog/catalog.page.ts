@@ -21,11 +21,12 @@ import {
   IonToolbar,
 } from '@ionic/angular';
 
-import { mediaLabel, scoreLabel, yearLabel } from '../../core/display';
+import { hideBrokenImage, mediaLabel, scoreLabel, yearLabel } from '../../core/display';
 import { CATALOG_GENRES } from '../../core/genres';
 import type { CatalogSort, GenreId, Title, UserRole } from '../../core/models';
 import { TitlesService } from '../../core/titles.service';
-import { validateYear } from '../../core/validation';
+import { asGenre, clampScore, parseYearInput } from '../../core/validation';
+import { LIMITS } from '../../core/limits';
 
 @Component({
   selector: 'app-catalog',
@@ -77,6 +78,8 @@ export class CatalogPage {
       this.minScore() > 0,
   );
 
+  readonly limits = LIMITS;
+  readonly hideBroken = hideBrokenImage;
   readonly scoreText = scoreLabel;
   readonly yearText = yearLabel;
   readonly kind = mediaLabel;
@@ -90,8 +93,8 @@ export class CatalogPage {
   }
 
   onQuery(event: Event): void {
-    const value = (event as CustomEvent<{ value?: string | null }>).detail.value;
-    this.query.set(value ?? '');
+    const value = (event as CustomEvent<{ value?: string | null }>).detail.value ?? '';
+    this.query.set(value.slice(0, LIMITS.search.max));
     this.searched.set(false);
     if (this.nameTimer) {
       clearTimeout(this.nameTimer);
@@ -100,17 +103,20 @@ export class CatalogPage {
   }
 
   onGenre(event: Event): void {
-    const value = (event as CustomEvent<{ value?: string }>).detail.value;
-    this.genre.set(value === 'accion' || value === 'drama' || value === 'misterio' ? value : '');
+    const value = (event as CustomEvent<{ value?: string }>).detail.value ?? '';
+    this.genre.set(asGenre(value));
     this.searched.set(false);
     void this.load();
   }
 
   onYear(event: Event): void {
     const value = (event as CustomEvent<{ value?: string | null }>).detail.value ?? '';
-    this.year.set(value);
+    const digits = value.replace(/\D/g, '').slice(0, 4);
+    this.year.set(digits);
     this.searched.set(false);
-    if (value.trim() !== '' && !/^\d{4}$/.test(value.trim())) {
+    const parsed = parseYearInput(digits);
+    if (parsed.state === 'invalid') {
+      this.error.set(parsed.error);
       return;
     }
     void this.load();
@@ -118,7 +124,7 @@ export class CatalogPage {
 
   onMin(event: Event): void {
     const value = (event as CustomEvent<{ value?: number }>).detail.value;
-    this.minScore.set(typeof value === 'number' ? Math.round(value) : 0);
+    this.minScore.set(clampScore(typeof value === 'number' ? value : 0));
     this.searched.set(false);
     void this.load();
   }
@@ -153,18 +159,14 @@ export class CatalogPage {
   }
 
   private async load(): Promise<void> {
-    const rawYear = this.year().trim();
-    let year: number | null = null;
-    if (rawYear) {
-      if (!/^\d{4}$/.test(rawYear)) {
-        return;
-      }
-      year = Number(rawYear);
-      const check = validateYear(year);
-      if (!check.ok) {
-        this.error.set(check.error ?? 'Año inválido.');
-        return;
-      }
+    const parsedYear = parseYearInput(this.year());
+    if (parsedYear.state === 'pending') {
+      return;
+    }
+    if (parsedYear.state === 'invalid') {
+      this.error.set(parsedYear.error);
+      this.loading.set(false);
+      return;
     }
 
     const current = ++this.request;
@@ -172,7 +174,7 @@ export class CatalogPage {
     const result = await this.titlesApi.listCatalog({
       name: this.query(),
       genre: this.genre(),
-      year,
+      year: parsedYear.state === 'ok' ? parsedYear.year : null,
       minScore: this.minScore(),
       sort: this.sort(),
       scoreKind: this.scoreKind(),

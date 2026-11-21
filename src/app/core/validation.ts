@@ -1,5 +1,5 @@
 import { LIMITS } from './limits';
-import type { UserRole } from './models';
+import type { GenreId, UserRole } from './models';
 import { normalizeText } from './text';
 
 export interface ValidationResult {
@@ -23,7 +23,16 @@ export function validateName(value: string): ValidationResult {
 
 export function validateEmail(value: string): ValidationResult {
   const email = normalizeText(value).toLowerCase();
-  if (email.length < LIMITS.email.min || !EMAIL_REGEX.test(email)) {
+  if (email.length < LIMITS.email.min) {
+    return { ok: false, error: 'Ingresa un correo válido.' };
+  }
+  if (email.length > LIMITS.email.max) {
+    return { ok: false, error: `El correo no puede superar ${LIMITS.email.max} caracteres.` };
+  }
+  if (!email.includes('@')) {
+    return { ok: false, error: 'El correo debe incluir @.' };
+  }
+  if (!EMAIL_REGEX.test(email)) {
     return {
       ok: false,
       error: 'Ingresa un correo válido (ej: tu@correo.com, nombre@empresa.net).',
@@ -75,6 +84,53 @@ export function validateYear(value: number): ValidationResult {
     return { ok: false, error: `El año debe estar entre ${LIMITS.year.min} y ${LIMITS.year.max}.` };
   }
   return { ok: true };
+}
+
+export type YearInput =
+  | { state: 'empty' }
+  | { state: 'pending' }
+  | { state: 'invalid'; error: string }
+  | { state: 'ok'; year: number };
+
+export function parseYearInput(raw: string): YearInput {
+  const value = raw.trim();
+  if (!value) {
+    return { state: 'empty' };
+  }
+  if (/^\d{1,3}$/.test(value)) {
+    return { state: 'pending' };
+  }
+  if (!/^\d{4}$/.test(value)) {
+    return { state: 'invalid', error: 'El año debe tener 4 dígitos, sin decimales.' };
+  }
+  const year = Number(value);
+  const check = validateYear(year);
+  if (!check.ok) {
+    return { state: 'invalid', error: check.error ?? 'Año inválido.' };
+  }
+  return { state: 'ok', year };
+}
+
+export function clampScore(value: number): number {
+  if (!Number.isFinite(value)) {
+    return LIMITS.score.min;
+  }
+  return Math.min(LIMITS.score.max, Math.max(LIMITS.score.min, Math.round(value)));
+}
+
+export function clipText(value: string, max: number): string {
+  const text = normalizeText(value);
+  return text.length > max ? text.slice(0, max).trim() : text;
+}
+
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+export function isUuid(value: string): boolean {
+  return UUID_REGEX.test(value);
+}
+
+export function asGenre(value: string): GenreId {
+  return value === 'accion' || value === 'drama' || value === 'misterio' ? value : '';
 }
 
 export function validateSearch(value: string): ValidationResult {

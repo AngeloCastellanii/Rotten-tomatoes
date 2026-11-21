@@ -12,6 +12,13 @@ const LANGUAGES: Record<string, string> = {
   zh: 'Chino',
 };
 
+export function hideBrokenImage(event: Event): void {
+  const image = event.target;
+  if (image instanceof HTMLImageElement) {
+    image.style.visibility = 'hidden';
+  }
+}
+
 export function scoreLabel(value: number | null): string {
   if (value === null) {
     return 'Sin puntaje';

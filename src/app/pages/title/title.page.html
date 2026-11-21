@@ -16,7 +16,7 @@
     <p class="ion-padding ion-text-center">{{ error() || 'No se encontró el título.' }}</p>
   } @else {
     @if (title()?.posterUrl; as poster) {
-      <img class="poster" [src]="poster" [alt]="'Carátula de ' + title()?.name" />
+      <img class="poster" [src]="poster" [alt]="'Carátula de ' + title()?.name" (error)="hideBroken($event)" />
     } @else {
       <p class="ion-padding muted">Sin carátula.</p>
     }
@@ -63,7 +63,7 @@
               <ion-item>
                 @if (person.profileUrl) {
                   <ion-thumbnail slot="start">
-                    <img [src]="person.profileUrl" [alt]="person.name" />
+                    <img [src]="person.profileUrl" [alt]="person.name" (error)="hideBroken($event)" />
                   </ion-thumbnail>
                 }
                 <ion-label>
@@ -90,10 +90,11 @@
           labelPlacement="stacked"
           fill="outline"
           [autoGrow]="true"
-          [maxlength]="1000"
+          [maxlength]="limits.review.max"
           [value]="body()"
           (ionInput)="onBody($event)"
         ></ion-textarea>
+        <p class="muted">{{ body().trim().length }}/{{ limits.review.max }} caracteres.</p>
         <ion-range
           aria-label="Puntaje"
           [min]="0"
@@ -109,7 +110,7 @@
         @if (notice()) {
           <ion-text color="success">{{ notice() }}</ion-text>
         }
-        <ion-button expand="block" (click)="save()" [disabled]="busy()">
+        <ion-button expand="block" (click)="save()" [disabled]="busy() || body().trim().length < limits.review.min">
           {{ ownReview() ? 'Guardar reseña' : 'Publicar reseña' }}
         </ion-button>
         @if (ownReview()) {

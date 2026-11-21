@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Rotten Potatoes</string>
+    <string name="title_activity_main">Rotten Potatoes</string>
+    <string name="package_name">com.moviles.rottentomatoes</string>
+    <string name="custom_url_scheme">com.moviles.rottentomatoes</string>
+</resources>

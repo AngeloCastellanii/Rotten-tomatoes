@@ -1,12 +1,15 @@
 import { Injectable } from '@angular/core';
 
 import { matchesGenre } from './genres';
+import { LIMITS } from './limits';
 import { mapTitle } from './mappers';
 import type { ActionResult, CatalogFilters, MediaType, Title } from './models';
 import { environment } from '../../environments/environment';
 import { isTmdbConfigured, supabase } from './supabase';
 import { normalizeText } from './text';
-import { validateSearch } from './validation';
+import { clampScore, clipText, isUuid, validateSearch, validateYear } from './validation';
+
+const NETWORK_ERROR = 'No hay conexión con el servidor. Revisa tu internet e inténtalo de nuevo.';
 
 const IMAGE_BASE = 'https://image.tmdb.org/t/p/w500';
 const SEARCH_LIMIT = 8;
@@ -19,9 +22,16 @@ interface TmdbListItem {
 @Injectable({ providedIn: 'root' })
 export class TitlesService {
   async listCatalog(filters: CatalogFilters): Promise<ActionResult<{ titles: Title[] }>> {
+    if (filters.year !== null) {
+      const yearCheck = validateYear(filters.year);
+      if (!yearCheck.ok) {
+        return { ok: false, error: yearCheck.error ?? 'Año inválido.' };
+      }
+    }
     const scoreColumn = filters.scoreKind === 'critic' ? 'critic_score' : 'audience_score';
+    const minScore = clampScore(filters.minScore);
     let request = supabase.from('titles').select('*');
-    const name = normalizeText(filters.name).replace(/[%_,]/g, '');
+    const name = clipText(filters.name, LIMITS.search.max).replace(/[%_,]/g, '');
     if (name) {
       request = request.ilike('name', `%${name}%`);
     }
@@ -31,34 +41,45 @@ export class TitlesService {
         .gte('release_date', `${year}-01-01`)
         .lte('release_date', `${year}-12-31`);
     }
-    if (filters.minScore > 0) {
-      request = request.gte(scoreColumn, filters.minScore);
+    if (minScore > 0) {
+      request = request.gte(scoreColumn, minScore);
     }
     request =
       filters.sort === 'date'
         ? request.order('release_date', { ascending: false, nullsFirst: false })
         : request.order(scoreColumn, { ascending: false, nullsFirst: false });
 
-    const { data, error } = await request.limit(80);
-    if (error) {
-      return { ok: false, error: 'No se pudo leer el catálogo.' };
+    try {
+      const { data, error } = await request.limit(80);
+      if (error) {
+        return { ok: false, error: 'No se pudo leer el catálogo.' };
+      }
+      const titles = (data ?? [])
+        .flatMap((row) => mapTitle(row) ?? [])
+        .filter((title) => matchesGenre(title.genres, filters.genre));
+      return { ok: true, titles };
+    } catch {
+      return { ok: false, error: NETWORK_ERROR };
     }
-    const titles = (data ?? [])
-      .flatMap((row) => mapTitle(row) ?? [])
-      .filter((title) => matchesGenre(title.genres, filters.genre));
-    return { ok: true, titles };
   }
 
   async getById(id: string): Promise<ActionResult<{ title: Title }>> {
-    const { data, error } = await supabase.from('titles').select('*').eq('id', id).maybeSingle();
-    if (error || !data) {
+    if (!isUuid(id)) {
       return { ok: false, error: 'No se encontró el título.' };
     }
-    const title = mapTitle(data);
-    if (!title) {
-      return { ok: false, error: 'No se encontró el título.' };
+    try {
+      const { data, error } = await supabase.from('titles').select('*').eq('id', id).maybeSingle();
+      if (error || !data) {
+        return { ok: false, error: 'No se encontró el título.' };
+      }
+      const title = mapTitle(data);
+      if (!title) {
+        return { ok: false, error: 'No se encontró el título.' };
+      }
+      return { ok: true, title };
+    } catch {
+      return { ok: false, error: NETWORK_ERROR };
     }
-    return { ok: true, title };
   }
 
   async searchAndStore(rawQuery: string): Promise<ActionResult<{ titles: Title[] }>> {
@@ -82,18 +103,22 @@ export class TitlesService {
     }
 
     const titles: Title[] = [];
-    for (const item of results) {
-      if (typeof item.id !== 'number') {
-        continue;
+    try {
+      for (const item of results) {
+        if (typeof item.id !== 'number' || item.id <= 0) {
+          continue;
+        }
+        const mediaType = item.media_type === 'tv' ? 'tv' : item.media_type === 'movie' ? 'movie' : null;
+        if (!mediaType) {
+          continue;
+        }
+        const stored = await this.ensureStored(item.id, mediaType);
+        if (stored) {
+          titles.push(stored);
+        }
       }
-      const mediaType = item.media_type === 'tv' ? 'tv' : item.media_type === 'movie' ? 'movie' : null;
-      if (!mediaType) {
-        continue;
-      }
-      const stored = await this.ensureStored(item.id, mediaType);
-      if (stored) {
-        titles.push(stored);
-      }
+    } catch {
+      return { ok: false, error: NETWORK_ERROR };
     }
     return { ok: true, titles };
   }
@@ -173,9 +198,9 @@ export class TitlesService {
     return {
       tmdb_id: tmdbId,
       media_type: mediaType,
-      name: name || 'Sin título',
-      overview: text(detail['overview']),
-      release_date: release || null,
+      name: clipText(name || 'Sin título', LIMITS.titleName.max) || 'Sin título',
+      overview: clipText(text(detail['overview']), LIMITS.overview.max),
+      release_date: /^\d{4}-\d{2}-\d{2}$/.test(release) ? release : null,
       poster_url: imageUrl(detail['poster_path']),
       backdrop_url: imageUrl(detail['backdrop_path']),
       genres: genreNames(detail['genres']),
@@ -224,33 +249,40 @@ function castMembers(
       return [];
     }
     const row = item as Record<string, unknown>;
-    const name = text(row['name']);
+    const name = clipText(text(row['name']), LIMITS.castName.max);
     if (!name) {
       return [];
     }
     return [
       {
         name,
-        character: text(row['character']),
+        character: clipText(text(row['character']), LIMITS.castName.max),
         profile_url: imageUrl(row['profile_path']),
       },
     ];
   });
 }
 
+function boundedMinutes(value: number): number | null {
+  if (!Number.isFinite(value) || value < 0 || value > 2000) {
+    return null;
+  }
+  return Math.round(value);
+}
+
 function runtime(mediaType: MediaType, detail: Record<string, unknown>): number | null {
   if (mediaType === 'movie' && typeof detail['runtime'] === 'number') {
-    return detail['runtime'];
+    return boundedMinutes(detail['runtime']);
   }
   const list = detail['episode_run_time'];
   if (Array.isArray(list) && typeof list[0] === 'number') {
-    return list[0];
+    return boundedMinutes(list[0]);
   }
   return null;
 }
 
 function roundScore(value: unknown): number | null {
-  if (typeof value !== 'number' || !Number.isFinite(value)) {
+  if (typeof value !== 'number' || !Number.isFinite(value) || value < 0 || value > 10) {
     return null;
   }
   return Math.round(value * 10) / 10;
