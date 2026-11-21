@@ -13,6 +13,8 @@ create table if not exists public.profiles (
   updated_at timestamptz not null default now()
 );
 
+alter table public.profiles add column if not exists role text not null default 'audience';
+
 create table if not exists public.titles (
   id uuid primary key default gen_random_uuid(),
   tmdb_id integer not null,
@@ -234,6 +236,10 @@ create policy "reviews_delete_own" on public.reviews
 grant select, insert, update on public.profiles to authenticated;
 grant select, insert on public.titles to authenticated;
 grant select, insert, update, delete on public.reviews to authenticated;
+
+alter table public.profiles drop constraint if exists profiles_role_check;
+alter table public.profiles
+  add constraint profiles_role_check check (role in ('audience', 'critic'));
 
 alter table public.profiles drop constraint if exists profiles_name_len;
 alter table public.profiles
