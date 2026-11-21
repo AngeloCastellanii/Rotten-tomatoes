@@ -11,9 +11,9 @@
   <div class="page">
     <form class="stack" (submit)="search($event)">
       <ion-searchbar
-        aria-label="Nombre de la película o serie"
+        aria-label="Nombre de la película, serie o programa"
         [value]="query()"
-        placeholder="Nombre de la película o serie"
+        placeholder="Nombre de la película, serie o programa"
         [attr.maxlength]="limits.search.max"
         [debounce]="0"
         (ionInput)="onQuery($event)"
@@ -83,6 +83,21 @@
         </ion-segment-button>
       </ion-segment>
 
+      <ion-segment scrollable [value]="format()" (ionChange)="onFormat($event)" aria-label="Tipo de título">
+        <ion-segment-button value="all">
+          <ion-label>Todo</ion-label>
+        </ion-segment-button>
+        <ion-segment-button value="movie">
+          <ion-label>Películas</ion-label>
+        </ion-segment-button>
+        <ion-segment-button value="series">
+          <ion-label>Series</ion-label>
+        </ion-segment-button>
+        <ion-segment-button value="program">
+          <ion-label>Programas</ion-label>
+        </ion-segment-button>
+      </ion-segment>
+
       <p class="muted">El mínimo y el orden usan las reseñas, no el puntaje de TMDB.</p>
     </section>
 
@@ -96,7 +111,7 @@
         <div class="skeleton"></div>
         <div class="skeleton"></div>
       </div>
-    } @else if (titles().length === 0) {
+    } @else if (groups().length === 0) {
       <div class="empty-state" role="status">
         <h2 class="section-title">
           {{ searched() ? 'Sin resultados' : filtering() ? 'Nada coincide' : 'Cartelera vacía' }}
@@ -112,36 +127,41 @@
         </p>
       </div>
     } @else {
-      <div class="catalog-grid">
-        @for (title of titles(); track title.id) {
-          <a class="title-card" [routerLink]="['/tabs/title', title.id]">
-            <div class="poster-frame poster-frame-cover">
-              @if (title.posterUrl) {
-                <img [src]="title.posterUrl" [alt]="'Carátula de ' + title.name" (error)="hideBroken($event)" />
-              }
-              <span class="poster-fallback">{{ kind(title.mediaType) }}</span>
-            </div>
-            <div class="card-body">
-              <h2>{{ title.name }}</h2>
-              <p class="muted">{{ kind(title.mediaType) }} · {{ yearText(title.releaseDate) }}</p>
-              @if (title.genres.length) {
-                <ul class="genre-line">
-                  @for (genre of title.genres; track genre) {
-                    <li class="genre-chip">{{ genre }}</li>
+      @for (group of groups(); track group.id) {
+        <section class="catalog-group" [attr.aria-label]="group.label">
+          <h2 class="section-title">{{ group.label }}</h2>
+          <div class="catalog-grid">
+            @for (title of group.titles; track title.id) {
+              <a class="title-card" [routerLink]="['/tabs/title', title.id]">
+                <div class="poster-frame poster-frame-cover">
+                  @if (title.posterUrl) {
+                    <img [src]="title.posterUrl" [alt]="'Carátula de ' + title.name" (error)="hideBroken($event)" />
                   }
-                </ul>
-              }
-              @if (title.overview) {
-                <p class="copy">{{ title.overview }}</p>
-              }
-              <p class="score-line">
-                <span class="score-pill score-pill-audience">Público {{ scoreText(title.audienceScore) }}</span>
-                <span class="score-pill score-pill-critic">Críticos {{ scoreText(title.criticScore) }}</span>
-              </p>
-            </div>
-          </a>
-        }
-      </div>
+                  <span class="poster-fallback">{{ kind(title) }}</span>
+                </div>
+                <div class="card-body">
+                  <h2>{{ title.name }}</h2>
+                  <p class="muted">{{ kind(title) }} · {{ yearText(title.releaseDate) }}</p>
+                  @if (title.genres.length) {
+                    <ul class="genre-line">
+                      @for (genre of title.genres; track genre) {
+                        <li class="genre-chip">{{ genre }}</li>
+                      }
+                    </ul>
+                  }
+                  @if (title.overview) {
+                    <p class="copy">{{ title.overview }}</p>
+                  }
+                  <p class="score-line">
+                    <span class="score-pill score-pill-audience">Público {{ scoreText(title.audienceScore) }}</span>
+                    <span class="score-pill score-pill-critic">Críticos {{ scoreText(title.criticScore) }}</span>
+                  </p>
+                </div>
+              </a>
+            }
+          </div>
+        </section>
+      }
     }
   </div>
 </ion-content>

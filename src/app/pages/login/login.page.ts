@@ -1,14 +1,7 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, signal, viewChild } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
-import {
-  IonButton,
-  IonContent,
-  IonHeader,
-  IonInput,
-  IonTitle,
-  IonToolbar,
-} from '@ionic/angular';
+import { IonButton, IonContent, IonInput } from '@ionic/angular';
 
 import { AuthService } from '../../core/auth.service';
 
@@ -18,9 +11,6 @@ import { AuthService } from '../../core/auth.service';
   imports: [
     ReactiveFormsModule,
     RouterLink,
-    IonHeader,
-    IonToolbar,
-    IonTitle,
     IonContent,
     IonInput,
     IonButton,
@@ -30,13 +20,27 @@ export class LoginPage {
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
   private readonly forms = inject(FormBuilder);
+  private readonly emailField = viewChild<IonInput>('emailField');
 
+  readonly mode = signal<'welcome' | 'login'>('welcome');
+  readonly showPassword = signal(false);
   readonly error = signal('');
   readonly busy = signal(false);
   readonly form = this.forms.nonNullable.group({
     email: '',
     password: '',
   });
+
+  showLogin(): void {
+    this.mode.set('login');
+    setTimeout(() => void this.emailField()?.setFocus());
+  }
+
+  showWelcome(): void {
+    this.error.set('');
+    this.mode.set('welcome');
+    setTimeout(() => document.getElementById('gate-enter')?.focus());
+  }
 
   async submit(): Promise<void> {
     if (this.busy()) {

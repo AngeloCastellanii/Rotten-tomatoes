@@ -15,7 +15,7 @@ import {
 } from '@ionic/angular';
 
 import { AuthService } from '../../core/auth.service';
-import { dateLabel, hideBrokenImage, languageLabel, mediaLabel, roleLabel, runtimeLabel, scoreLabel } from '../../core/display';
+import { dateLabel, hideBrokenImage, languageLabel, roleLabel, runtimeLabel, scoreLabel, showFormatLabel } from '../../core/display';
 import { LIMITS } from '../../core/limits';
 import type { Review, Title } from '../../core/models';
 import { ReviewsService } from '../../core/reviews.service';
@@ -60,7 +60,7 @@ export class TitlePage {
   readonly dateText = dateLabel;
   readonly runtimeText = runtimeLabel;
   readonly languageText = languageLabel;
-  readonly kind = mediaLabel;
+  readonly kind = showFormatLabel;
   readonly roleText = roleLabel;
 
   constructor() {

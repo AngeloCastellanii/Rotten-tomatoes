@@ -28,12 +28,12 @@
             @if (title()?.posterUrl; as poster) {
               <img [src]="poster" [alt]="'Carátula de ' + title()?.name" (error)="hideBroken($event)" />
             }
-            <span class="poster-fallback">{{ kind(title()!.mediaType) }}</span>
+            <span class="poster-fallback">{{ kind(title()!) }}</span>
           </div>
           <header class="hero-copy">
             <h1 class="sheet-title">{{ title()?.name }}</h1>
             <p class="muted">
-              {{ kind(title()!.mediaType) }} · {{ dateText(title()!.releaseDate) }} ·
+              {{ kind(title()!) }} · {{ dateText(title()!.releaseDate) }} ·
               {{ runtimeText(title()!.runtimeMinutes) }} · {{ languageText(title()!.originalLanguage) }}
             </p>
           </header>

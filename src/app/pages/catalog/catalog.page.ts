@@ -17,7 +17,7 @@ import {
   IonToolbar,
 } from '@ionic/angular';
 
-import { hideBrokenImage, mediaLabel, scoreLabel, yearLabel } from '../../core/display';
+import { hideBrokenImage, scoreLabel, showFormat, showFormatLabel, yearLabel } from '../../core/display';
 import { CATALOG_GENRES } from '../../core/genres';
 import type { CatalogSort, GenreId, Title, UserRole } from '../../core/models';
 import { TitlesService } from '../../core/titles.service';
@@ -47,7 +47,7 @@ import { LIMITS } from '../../core/limits';
 })
 export class CatalogPage {
   private readonly titlesApi = inject(TitlesService);
-  private request = 0;
+  private loadGen = 0;
   private nameTimer: ReturnType<typeof setTimeout> | null = null;
 
   readonly genres = CATALOG_GENRES;
@@ -61,20 +61,37 @@ export class CatalogPage {
   readonly minScore = signal(0);
   readonly sort = signal<CatalogSort>('score');
   readonly scoreKind = signal<UserRole>('audience');
+  readonly format = signal<'all' | 'movie' | 'series' | 'program'>('all');
   readonly searched = signal(false);
   readonly filtering = computed(
     () =>
       this.query().trim() !== '' ||
       this.genre() !== '' ||
       this.year().trim() !== '' ||
-      this.minScore() > 0,
+      this.minScore() > 0 ||
+      this.format() !== 'all',
   );
+  readonly groups = computed(() => {
+    const format = this.format();
+    const sections = [
+      { id: 'movie' as const, label: 'Películas' },
+      { id: 'series' as const, label: 'Series' },
+      { id: 'program' as const, label: 'Programas de televisión' },
+    ];
+    return sections
+      .filter((section) => format === 'all' || format === section.id)
+      .map((section) => ({
+        ...section,
+        titles: this.titles().filter((title) => showFormat(title) === section.id),
+      }))
+      .filter((section) => section.titles.length > 0);
+  });
 
   readonly limits = LIMITS;
   readonly hideBroken = hideBrokenImage;
   readonly scoreText = scoreLabel;
   readonly yearText = yearLabel;
-  readonly kind = mediaLabel;
+  readonly kind = showFormatLabel;
 
   constructor() {
     void this.load();
@@ -133,6 +150,11 @@ export class CatalogPage {
     void this.load();
   }
 
+  onFormat(event: Event): void {
+    const value = (event as CustomEvent<{ value?: string }>).detail.value;
+    this.format.set(value === 'movie' || value === 'series' || value === 'program' ? value : 'all');
+  }
+
   async search(event?: Event): Promise<void> {
     event?.preventDefault();
     if (this.busy()) {
@@ -142,21 +164,28 @@ export class CatalogPage {
     if (this.nameTimer) {
       clearTimeout(this.nameTimer);
     }
-    const current = ++this.request;
+    const gen = ++this.loadGen;
     this.busy.set(true);
-    const result = await this.titlesApi.searchAndStore(this.query());
-    if (current !== this.request) {
-      return;
+    this.loading.set(true);
+    try {
+      const result = await this.titlesApi.searchAndStore(this.query());
+      if (gen !== this.loadGen) {
+        return;
+      }
+      this.searched.set(true);
+      if (!result.ok) {
+        this.error.set(result.error);
+        this.focusError();
+        return;
+      }
+      this.error.set('');
+      this.titles.set(result.titles);
+    } finally {
+      this.busy.set(false);
+      if (gen === this.loadGen) {
+        this.loading.set(false);
+      }
     }
-    this.busy.set(false);
-    this.searched.set(true);
-    this.loading.set(false);
-    if (!result.ok) {
-      this.error.set(result.error);
-      this.focusError();
-      return;
-    }
-    this.titles.set(result.titles);
   }
 
   private async load(): Promise<void> {
@@ -171,7 +200,7 @@ export class CatalogPage {
       return;
     }
 
-    const current = ++this.request;
+    const gen = ++this.loadGen;
     this.loading.set(true);
     const result = await this.titlesApi.listCatalog({
       name: this.query(),
@@ -181,7 +210,7 @@ export class CatalogPage {
       sort: this.sort(),
       scoreKind: this.scoreKind(),
     });
-    if (current !== this.request) {
+    if (gen !== this.loadGen) {
       return;
     }
     if (!result.ok) {
@@ -192,7 +221,7 @@ export class CatalogPage {
     }
     if (result.titles.length === 0 && !this.filtering() && !this.searched()) {
       const seeded = await this.titlesApi.storePopular();
-      if (current !== this.request) {
+      if (gen !== this.loadGen) {
         return;
       }
       if (!seeded.ok) {
@@ -209,7 +238,7 @@ export class CatalogPage {
         sort: this.sort(),
         scoreKind: this.scoreKind(),
       });
-      if (current !== this.request) {
+      if (gen !== this.loadGen) {
         return;
       }
       this.loading.set(false);

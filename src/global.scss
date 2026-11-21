@@ -72,6 +72,68 @@ ion-searchbar {
   border-radius: 16px;
 }
 
+ion-content.gate-screen::part(scroll) {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+ion-content.gate-form::part(scroll) {
+  justify-content: flex-start;
+}
+
+.gate {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  width: min(100%, 440px);
+  margin-inline: auto;
+  padding: 24px 16px 32px;
+}
+
+.gate-brand {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  text-align: center;
+}
+
+.gate-brand h1,
+.gate h1 {
+  margin: 0;
+  font-size: 1.75rem;
+  line-height: 1.2;
+}
+
+.gate-mark {
+  width: 96px;
+  height: 96px;
+  border-radius: 20px;
+}
+
+.gate-points {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.gate-points li {
+  padding: 12px 16px;
+  border: 1px solid var(--rp-border);
+  border-radius: 8px;
+  background: var(--rp-card);
+  line-height: 1.4;
+}
+
+.gate-back {
+  align-self: flex-start;
+  margin: 0;
+}
+
 .toolbar-mark {
   display: block;
   width: 28px;

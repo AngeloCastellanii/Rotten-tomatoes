@@ -1,39 +1,64 @@
-<ion-header>
-  <ion-toolbar>
-    <ion-title>Rotten Potatoes</ion-title>
-  </ion-toolbar>
-</ion-header>
-
-<ion-content>
-  <form class="form-page stack" [formGroup]="form" (ngSubmit)="submit()">
-    <img class="brand-mark" src="assets/icon/potato.png" alt="Rotten Potatoes" width="72" height="72" />
-    <p class="lead">Entra para ver la cartelera.</p>
-    <ion-input
-      label="Correo"
-      labelPlacement="stacked"
-      type="email"
-      inputmode="email"
-      autocomplete="email"
-      fill="outline"
-      maxlength="254"
-      formControlName="email"
-    ></ion-input>
-    <ion-input
-      label="Contraseña"
-      labelPlacement="stacked"
-      type="password"
-      autocomplete="current-password"
-      fill="outline"
-      minlength="6"
-      maxlength="72"
-      formControlName="password"
-    ></ion-input>
-    @if (error()) {
-      <p id="form-error" class="form-error" role="alert" tabindex="-1">{{ error() }}</p>
-    }
-    <ion-button expand="block" type="submit" [disabled]="busy()">
-      {{ busy() ? 'Entrando…' : 'Entrar' }}
-    </ion-button>
-    <ion-button expand="block" fill="clear" routerLink="/register">Crear cuenta</ion-button>
-  </form>
+<ion-content class="gate-screen" [class.gate-form]="mode() === 'login'">
+  @if (mode() === 'welcome') {
+    <section class="gate">
+      <div class="gate-brand">
+        <img class="gate-mark" src="assets/icon/potato.png" alt="" width="96" height="96" />
+        <h1>Rotten Potatoes</h1>
+        <p class="lead">Puntajes del público y de los críticos, por separado.</p>
+      </div>
+      <ul class="gate-points">
+        <li>Cartelera con carátula, géneros y sinopsis.</li>
+        <li>Promedio del público y promedio de los críticos.</li>
+        <li>Una reseña por persona y por título.</li>
+      </ul>
+      <div class="stack">
+        <ion-button id="gate-enter" expand="block" (click)="showLogin()">Entrar</ion-button>
+        <ion-button expand="block" fill="outline" routerLink="/register">Crear cuenta</ion-button>
+      </div>
+    </section>
+  } @else {
+    <form class="gate stack" [formGroup]="form" (ngSubmit)="submit()">
+      <ion-button class="gate-back" fill="clear" type="button" (click)="showWelcome()">Volver</ion-button>
+      <h1>Entra con tu correo</h1>
+      <ion-input
+        #emailField
+        label="Correo"
+        labelPlacement="stacked"
+        type="email"
+        inputmode="email"
+        autocomplete="email"
+        fill="outline"
+        maxlength="254"
+        formControlName="email"
+      ></ion-input>
+      <ion-input
+        label="Contraseña"
+        labelPlacement="stacked"
+        [type]="showPassword() ? 'text' : 'password'"
+        autocomplete="current-password"
+        fill="outline"
+        minlength="6"
+        maxlength="72"
+        formControlName="password"
+      >
+        <ion-button
+          slot="end"
+          fill="clear"
+          type="button"
+          [attr.aria-pressed]="showPassword()"
+          [attr.aria-label]="showPassword() ? 'Ocultar contraseña' : 'Mostrar contraseña'"
+          (click)="showPassword.set(!showPassword())"
+        >
+          {{ showPassword() ? 'Ocultar' : 'Ver' }}
+        </ion-button>
+      </ion-input>
+      @if (error()) {
+        <p id="form-error" class="form-error" role="alert" tabindex="-1">{{ error() }}</p>
+      }
+      <ion-button expand="block" type="submit" [disabled]="busy()">
+        {{ busy() ? 'Entrando…' : 'Entrar' }}
+      </ion-button>
+      <ion-button expand="block" fill="clear" routerLink="/register">Crear cuenta</ion-button>
+    </form>
+  }
 </ion-content>

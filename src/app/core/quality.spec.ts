@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { dateLabel, scoreLabel } from './display';
+import { dateLabel, scoreLabel, showFormat } from './display';
 import { matchesGenre } from './genres';
 import { mapReview, mapTitle } from './mappers';
 import {
@@ -33,6 +33,13 @@ describe('parametros de entrada', () => {
     expect(validatePassword('12345').ok).toBe(false);
     expect(validatePassword('123456').ok).toBe(true);
     expect(validatePassword('x'.repeat(73)).ok).toBe(false);
+  });
+
+  it('separa peliculas, series y programas', () => {
+    expect(showFormat({ mediaType: 'movie', genres: ['Documental'] })).toBe('movie');
+    expect(showFormat({ mediaType: 'tv', genres: ['Drama'] })).toBe('series');
+    expect(showFormat({ mediaType: 'tv', genres: ['Talk'] })).toBe('program');
+    expect(showFormat({ mediaType: 'tv', genres: ['Programa'] })).toBe('program');
   });
 
   it('no deja pasar reseñas ni búsquedas inválidas', () => {

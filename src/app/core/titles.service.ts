@@ -1,5 +1,6 @@
 import { Injectable } from '@angular/core';
 
+import { showFormat } from './display';
 import { matchesGenre } from './genres';
 import { LIMITS } from './limits';
 import { mapTitle } from './mappers';
@@ -13,6 +14,7 @@ const NETWORK_ERROR = 'No hay conexión con el servidor. Revisa tu internet e in
 
 const IMAGE_BASE = 'https://image.tmdb.org/t/p/w500';
 const SEARCH_LIMIT = 8;
+const TMDB_LANGUAGE = 'es-MX';
 
 interface TmdbListItem {
   id?: number;
@@ -98,30 +100,33 @@ export class TitlesService {
     let results: TmdbListItem[];
     try {
       results = await this.searchTmdb(query);
-    } catch {
-      return { ok: false, error: 'No se pudo consultar TMDB. Revisa la clave y tu conexión.' };
-    }
-
-    const titles: Title[] = [];
-    try {
-      for (const item of results) {
-        if (typeof item.id !== 'number' || item.id <= 0) {
-          continue;
-        }
-        const mediaType = item.media_type === 'tv' ? 'tv' : item.media_type === 'movie' ? 'movie' : null;
-        if (!mediaType) {
-          continue;
-        }
-        const stored = await this.ensureStored(item.id, mediaType);
-        if (stored) {
-          titles.push(stored);
-        }
-      }
     } catch (error) {
       return { ok: false, error: messageFrom(error) };
     }
+
+    const jobs: { id: number; mediaType: MediaType }[] = results.flatMap((item) => {
+      if (typeof item.id !== 'number' || item.id <= 0) {
+        return [];
+      }
+      const mediaType: MediaType | null =
+        item.media_type === 'tv' ? 'tv' : item.media_type === 'movie' ? 'movie' : null;
+      return mediaType ? [{ id: item.id, mediaType }] : [];
+    });
+    let lastError: unknown = null;
+    const stored = await pool(jobs, 3, async (job) => {
+      try {
+        return await this.ensureStored(job.id, job.mediaType);
+      } catch (error) {
+        lastError = error;
+        return null;
+      }
+    });
+    const titles = stored.flatMap((title) => title ?? []);
     if (titles.length === 0) {
-      return { ok: false, error: 'TMDB no encontró títulos para guardar.' };
+      return {
+        ok: false,
+        error: lastError ? messageFrom(lastError) : 'TMDB no encontró títulos para guardar.',
+      };
     }
     return { ok: true, titles };
   }
@@ -167,8 +172,8 @@ export class TitlesService {
     const path = mediaType === 'movie' ? 'movie' : 'tv';
     const url = new URL(`https://api.themoviedb.org/3/${path}/popular`);
     url.searchParams.set('api_key', environment.tmdbApiKey);
-    url.searchParams.set('language', 'es-ES');
-    const response = await fetch(url);
+    url.searchParams.set('language', TMDB_LANGUAGE);
+    const response = await tmdbFetch(url);
     if (!response.ok) {
       throw new Error(`TMDB ${response.status}`);
     }
@@ -182,10 +187,10 @@ export class TitlesService {
   private async searchTmdb(query: string): Promise<TmdbListItem[]> {
     const url = new URL('https://api.themoviedb.org/3/search/multi');
     url.searchParams.set('api_key', environment.tmdbApiKey);
-    url.searchParams.set('language', 'es-ES');
+    url.searchParams.set('language', TMDB_LANGUAGE);
     url.searchParams.set('include_adult', 'false');
     url.searchParams.set('query', query);
-    const response = await fetch(url);
+    const response = await tmdbFetch(url);
     if (!response.ok) {
       throw new Error(`TMDB ${response.status}`);
     }
@@ -262,13 +267,19 @@ export class TitlesService {
     return mapTitle(data);
   }
 
-  private async fetchDetail(tmdbId: number, mediaType: MediaType): Promise<Record<string, unknown>> {
+  private async fetchDetail(
+    tmdbId: number,
+    mediaType: MediaType,
+    credits = true,
+  ): Promise<Record<string, unknown>> {
     const path = mediaType === 'movie' ? 'movie' : 'tv';
     const url = new URL(`https://api.themoviedb.org/3/${path}/${tmdbId}`);
     url.searchParams.set('api_key', environment.tmdbApiKey);
-    url.searchParams.set('language', 'es-ES');
-    url.searchParams.set('append_to_response', 'credits');
-    const response = await fetch(url);
+    url.searchParams.set('language', TMDB_LANGUAGE);
+    if (credits) {
+      url.searchParams.set('append_to_response', 'credits');
+    }
+    const response = await tmdbFetch(url);
     if (!response.ok) {
       throw new Error(`TMDB ${response.status}`);
     }
@@ -292,7 +303,7 @@ export class TitlesService {
       release_date: /^\d{4}-\d{2}-\d{2}$/.test(release) ? release : null,
       poster_url: imageUrl(detail['poster_path']),
       backdrop_url: imageUrl(detail['backdrop_path']),
-      genres: genreNames(detail['genres']),
+      genres: genreList(mediaType, detail),
       cast: castMembers(detail['credits'], castLimit),
       runtime_minutes: runtime(mediaType, detail),
       original_language: text(detail['original_language']) || null,
@@ -303,13 +314,58 @@ export class TitlesService {
 
 function messageFrom(error: unknown): string {
   const raw = error instanceof Error ? error.message : '';
-  if (raw.startsWith('TMDB')) {
-    return 'No se pudo consultar TMDB. Revisa la clave y tu conexión.';
+  const name = error instanceof Error ? error.name : '';
+  if (name === 'TimeoutError' || name === 'AbortError' || raw === 'TMDB_TIMEOUT' || raw.startsWith('TMDB')) {
+    return 'TMDB no respondió. Si tienes una VPN activa, apágala e inténtalo de nuevo.';
+  }
+  if (raw.toLowerCase().includes('failed to fetch') || raw.toLowerCase().includes('network')) {
+    return 'No hay conexión con TMDB. Si tienes una VPN activa, apágala e inténtalo de nuevo.';
   }
   if (raw.toLowerCase().includes('row-level security') || raw.toLowerCase().includes('jwt')) {
     return 'No se pudo guardar. Cierra sesión, entra de nuevo e inténtalo.';
   }
   return raw.trim() || NETWORK_ERROR;
+}
+
+const TMDB_TIMEOUT_MS = 8000;
+const PROGRAM_TYPES = new Set(['reality', 'talk show', 'news', 'documentary', 'video']);
+
+async function tmdbFetch(url: URL): Promise<Response> {
+  try {
+    return await fetch(url, { signal: AbortSignal.timeout(TMDB_TIMEOUT_MS) });
+  } catch (error) {
+    const name = error instanceof Error ? error.name : '';
+    if (name === 'TimeoutError' || name === 'AbortError') {
+      throw new Error('TMDB_TIMEOUT');
+    }
+    throw error;
+  }
+}
+
+async function pool<T, R>(items: T[], size: number, task: (item: T) => Promise<R>): Promise<R[]> {
+  const out = new Array<R>(items.length);
+  let cursor = 0;
+  const run = async () => {
+    while (cursor < items.length) {
+      const index = cursor;
+      cursor += 1;
+      out[index] = await task(items[index]);
+    }
+  };
+  const workers = Math.min(size, items.length);
+  await Promise.all(Array.from({ length: workers }, () => run()));
+  return out;
+}
+
+function genreList(mediaType: MediaType, detail: Record<string, unknown>): string[] {
+  const names = genreNames(detail['genres']);
+  if (mediaType !== 'tv' || !PROGRAM_TYPES.has(text(detail['type']).toLowerCase())) {
+    return names;
+  }
+  if (showFormat({ mediaType, genres: names }) === 'program') {
+    return names;
+  }
+  return [...names, 'Programa'];
 }
 
 function text(value: unknown): string {

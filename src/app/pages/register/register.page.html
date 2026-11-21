@@ -1,13 +1,11 @@
-<ion-header>
-  <ion-toolbar>
-    <ion-title>Rotten Potatoes</ion-title>
-  </ion-toolbar>
-</ion-header>
-
-<ion-content>
-  <form class="form-page stack" [formGroup]="form" (ngSubmit)="submit()">
-    <img class="brand-mark" src="assets/icon/potato.png" alt="Rotten Potatoes" width="72" height="72" />
-    <p class="lead">El público y los críticos puntúan por separado.</p>
+<ion-content class="gate-screen gate-form">
+  <form class="gate stack" [formGroup]="form" (ngSubmit)="submit()">
+    <ion-button class="gate-back" fill="clear" type="button" routerLink="/login">Volver</ion-button>
+    <div class="gate-brand">
+      <img class="brand-mark" src="assets/icon/potato.png" alt="" width="72" height="72" />
+      <h1>Crear cuenta</h1>
+      <p class="lead">Elige si puntúas como público o como crítico.</p>
+    </div>
     <ion-input
       label="Nombre"
       labelPlacement="stacked"

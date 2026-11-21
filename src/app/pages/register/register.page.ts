@@ -4,13 +4,10 @@ import { Router, RouterLink } from '@angular/router';
 import {
   IonButton,
   IonContent,
-  IonHeader,
   IonInput,
   IonLabel,
   IonSegment,
   IonSegmentButton,
-  IonTitle,
-  IonToolbar,
 } from '@ionic/angular';
 
 import { AuthService } from '../../core/auth.service';
@@ -22,9 +19,6 @@ import type { UserRole } from '../../core/models';
   imports: [
     ReactiveFormsModule,
     RouterLink,
-    IonHeader,
-    IonToolbar,
-    IonTitle,
     IonContent,
     IonInput,
     IonButton,

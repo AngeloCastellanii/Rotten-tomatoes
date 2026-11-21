@@ -38,7 +38,7 @@ export function dateLabel(value: string | null): string {
   if (!year || !month || !day) {
     return value.slice(0, 4);
   }
-  return new Date(year, month - 1, day).toLocaleDateString('es', {
+  return new Date(year, month - 1, day).toLocaleDateString('es-MX', {
     day: 'numeric',
     month: 'long',
     year: 'numeric',
@@ -54,6 +54,43 @@ export function languageLabel(code: string | null): string {
     return 'Sin idioma';
   }
   return LANGUAGES[code.toLowerCase()] ?? code.toUpperCase();
+}
+
+export type ShowFormat = 'movie' | 'series' | 'program';
+
+const PROGRAM_GENRES = new Set([
+  'reality',
+  'news',
+  'noticias',
+  'talk',
+  'talk show',
+  'programa',
+  'programa de television',
+  'documental',
+  'documentary',
+]);
+
+export function showFormat(title: { mediaType: MediaType; genres: string[] }): ShowFormat {
+  if (title.mediaType === 'movie') {
+    return 'movie';
+  }
+  return title.genres.some((genre) => PROGRAM_GENRES.has(foldLabel(genre))) ? 'program' : 'series';
+}
+
+export function showFormatLabel(title: { mediaType: MediaType; genres: string[] }): string {
+  const format = showFormat(title);
+  if (format === 'movie') {
+    return 'Película';
+  }
+  return format === 'program' ? 'Programa' : 'Serie';
+}
+
+function foldLabel(value: string): string {
+  return value
+    .trim()
+    .toLocaleLowerCase('es-MX')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
 }
 
 export function mediaLabel(type: MediaType): string {
