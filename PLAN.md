@@ -6,16 +6,16 @@ Mismas prácticas que Recetario: pnpm, `.env` fuera de git, SQL con RLS, validac
 
 Stack: Ionic 9, Angular 22, Capacitor 8. Solo pnpm. `.npmrc` con `node-linker=hoisted` para que `cap sync` encuentre los plugins.
 
-Angular 22 exige Node `^22.22.3 || ^24.15.0 || >=26`. El Node del sistema es 24.14.1 y no alcanza. Hay un Node 24.22.3 portable en `%LOCALAPPDATA%\node-v24.22.3-win-x64`. Hay que tenerlo al frente del `PATH` antes de `pnpm start` o `pnpm run build`.
-
 ## Hecho
 
-Scaffold listo y compilado. Commit: `Scaffold Ionic Angular con Capacitor y pnpm`.
+- Scaffold. Commit: `Scaffold Ionic Angular con Capacitor y pnpm`.
+- Esquema Supabase (`supabase/schema.sql`), cliente y `.env` volcado al compilar. Commit: `Definir esquema Supabase de perfiles, titulos y resenas`.
+- Registro, sesión, perfil con rol público/crítico, tema claro/oscuro y borrado de cuenta. Commit: `Implementar registro, sesion y perfil con rol`.
+- Cartelera: buscar en TMDB y guardar el título si no está en la base. Commit: `Guardar en la base las peliculas y series traidas de TMDB`.
 
-- Ionic 9.0.12, Angular 22.2.6, Capacitor 8.6.2
-- App id `com.moviles.rottentomatoes`, `webDir` `www`
-- `.env.example`, `.gitignore`, `pnpm-lock.yaml`
-- La plataforma Android y el APK van al final
+Antes de probar: crea un proyecto Supabase nuevo, corre `supabase/schema.sql`, desactiva Confirm email, y llena `.env` con `SUPABASE_URL`, `SUPABASE_ANON_KEY` y `TMDB_API_KEY`. Luego `pnpm start`.
+
+Angular 22 exige Node `^22.22.3 || ^24.15.0 || >=26`. El Node del sistema es 24.14.1 y no alcanza. Hay un Node 24.22.3 portable en `%LOCALAPPDATA%\node-v24.22.3-win-x64`. Hay que tenerlo al frente del `PATH` antes de `pnpm start` o `pnpm run build`.
 
 ## Datos
 
@@ -62,20 +62,12 @@ La ruta del proyecto tiene espacios. El `assembleDebug` se lanza desde una unida
 
 ## Siguiente
 
-1. Esquema Supabase de perfiles, títulos y reseñas, y el cliente.
-2. Registro, sesión y perfil con rol.
-3. Guardar en la base las películas y series traídas de TMDB.
-4. Filtrar y ordenar el catálogo por nombre, género, fecha y puntaje.
-5. Ficha con sinopsis, reparto, carátula y ambos puntajes.
-6. Reseñas de público y de críticos.
-7. APK de Android.
-
-Mensajes de commit, en este orden:
+1. Filtrar y ordenar el catálogo por nombre, género, fecha y puntaje.
+2. Ficha con sinopsis, reparto, carátula y ambos puntajes.
+3. Reseñas de público y de críticos.
+4. APK de Android.
 
 ```bash
-git commit -m "Definir esquema Supabase de perfiles, titulos y resenas"
-git commit -m "Implementar registro, sesion y perfil con rol"
-git commit -m "Guardar en la base las peliculas y series traidas de TMDB"
 git commit -m "Filtrar y ordenar el catalogo por nombre, genero, fecha y puntaje"
 git commit -m "Mostrar ficha con sinopsis, reparto, caratula y ambos puntajes"
 git commit -m "Implementar resenas de publico y de criticos"

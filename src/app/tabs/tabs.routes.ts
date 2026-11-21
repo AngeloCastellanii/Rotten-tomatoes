@@ -8,6 +8,10 @@ export const routes: Routes = [
     component: TabsPage,
     children: [
       {
+        path: 'catalog',
+        loadComponent: () => import('../pages/catalog/catalog.page').then((m) => m.CatalogPage),
+      },
+      {
         path: 'reviews',
         loadComponent: () => import('../pages/reviews/reviews.page').then((m) => m.ReviewsPage),
       },
@@ -17,14 +21,14 @@ export const routes: Routes = [
       },
       {
         path: '',
-        redirectTo: '/tabs/profile',
+        redirectTo: '/tabs/catalog',
         pathMatch: 'full',
       },
     ],
   },
   {
     path: '',
-    redirectTo: '/tabs/profile',
+    redirectTo: '/tabs/catalog',
     pathMatch: 'full',
   },
 ];

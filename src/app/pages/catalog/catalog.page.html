@@ -1,0 +1,50 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-title>Cartelera</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content>
+  <form class="ion-padding stack" (ngSubmit)="search()">
+    <ion-searchbar
+      [value]="query()"
+      placeholder="Nombre de la película o serie"
+      [debounce]="0"
+      (ionInput)="onQuery($event)"
+      (keyup.enter)="search()"
+    ></ion-searchbar>
+    <ion-button expand="block" type="submit" [disabled]="busy()">
+      {{ busy() ? 'Buscando…' : 'Buscar y guardar' }}
+    </ion-button>
+    <p class="muted">Si el título no está en tu base, se guarda al buscar.</p>
+    @if (error()) {
+      <ion-text color="danger">{{ error() }}</ion-text>
+    }
+  </form>
+
+  @if (busy()) {
+    <div class="ion-text-center ion-padding">
+      <ion-spinner name="crescent"></ion-spinner>
+    </div>
+  } @else if (titles().length === 0) {
+    <p class="ion-padding ion-text-center muted">
+      {{ searched() ? 'No hubo resultados.' : 'Nada guardado todavía.' }}
+    </p>
+  } @else {
+    <ion-list lines="full">
+      @for (title of titles(); track title.id) {
+        <ion-item>
+          <ion-thumbnail slot="start">
+            @if (title.posterUrl) {
+              <img [src]="title.posterUrl" [alt]="'Carátula de ' + title.name" />
+            }
+          </ion-thumbnail>
+          <ion-label>
+            <h2>{{ title.name }}</h2>
+            <p>{{ kind(title) }} · {{ year(title.releaseDate) }}</p>
+          </ion-label>
+        </ion-item>
+      }
+    </ion-list>
+  }
+</ion-content>

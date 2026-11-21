@@ -69,6 +69,6 @@ export class RegisterPage {
       this.error.set(result.error);
       return;
     }
-    await this.router.navigateByUrl('/tabs/profile');
+    await this.router.navigateByUrl('/tabs/catalog');
   }
 }
