@@ -2,6 +2,7 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import {
   IonButton,
+  IonButtons,
   IonContent,
   IonHeader,
   IonInput,
@@ -34,6 +35,7 @@ import { LIMITS } from '../../core/limits';
     IonContent,
     IonSearchbar,
     IonButton,
+    IonButtons,
     IonSelect,
     IonSelectOption,
     IonInput,
@@ -137,16 +139,24 @@ export class CatalogPage {
       return;
     }
     this.error.set('');
+    if (this.nameTimer) {
+      clearTimeout(this.nameTimer);
+    }
+    const current = ++this.request;
     this.busy.set(true);
     const result = await this.titlesApi.searchAndStore(this.query());
+    if (current !== this.request) {
+      return;
+    }
     this.busy.set(false);
     this.searched.set(true);
+    this.loading.set(false);
     if (!result.ok) {
       this.error.set(result.error);
       this.focusError();
       return;
     }
-    await this.load();
+    this.titles.set(result.titles);
   }
 
   private async load(): Promise<void> {
@@ -174,12 +184,45 @@ export class CatalogPage {
     if (current !== this.request) {
       return;
     }
-    this.loading.set(false);
     if (!result.ok) {
+      this.loading.set(false);
       this.error.set(result.error);
       this.focusError();
       return;
     }
+    if (result.titles.length === 0 && !this.filtering() && !this.searched()) {
+      const seeded = await this.titlesApi.storePopular();
+      if (current !== this.request) {
+        return;
+      }
+      if (!seeded.ok) {
+        this.loading.set(false);
+        this.error.set(seeded.error);
+        this.focusError();
+        return;
+      }
+      const again = await this.titlesApi.listCatalog({
+        name: this.query(),
+        genre: this.genre(),
+        year: parsedYear.state === 'ok' ? parsedYear.year : null,
+        minScore: this.minScore(),
+        sort: this.sort(),
+        scoreKind: this.scoreKind(),
+      });
+      if (current !== this.request) {
+        return;
+      }
+      this.loading.set(false);
+      if (!again.ok) {
+        this.error.set(again.error);
+        this.focusError();
+        return;
+      }
+      this.error.set('');
+      this.titles.set(again.titles);
+      return;
+    }
+    this.loading.set(false);
     this.error.set('');
     this.titles.set(result.titles);
   }

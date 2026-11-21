@@ -3,6 +3,7 @@ import { RouterLink } from '@angular/router';
 import {
   AlertController,
   IonButton,
+  IonButtons,
   IonContent,
   IonHeader,
   IonTitle,
@@ -24,6 +25,7 @@ import { ReviewsService } from '../../core/reviews.service';
     IonTitle,
     IonContent,
     IonButton,
+    IonButtons,
   ],
 })
 export class ReviewsPage {

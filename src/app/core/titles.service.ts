@@ -117,10 +117,66 @@ export class TitlesService {
           titles.push(stored);
         }
       }
-    } catch {
-      return { ok: false, error: NETWORK_ERROR };
+    } catch (error) {
+      return { ok: false, error: messageFrom(error) };
+    }
+    if (titles.length === 0) {
+      return { ok: false, error: 'TMDB no encontró títulos para guardar.' };
     }
     return { ok: true, titles };
+  }
+
+  async storePopular(): Promise<ActionResult<{ titles: Title[] }>> {
+    if (!isTmdbConfigured) {
+      return {
+        ok: false,
+        error: 'Falta TMDB_API_KEY en .env. Guárdala y vuelve a iniciar la app.',
+      };
+    }
+    if (!this.popularTask) {
+      this.popularTask = this.loadPopular().finally(() => {
+        this.popularTask = null;
+      });
+    }
+    return this.popularTask;
+  }
+
+  private popularTask: Promise<ActionResult<{ titles: Title[] }>> | null = null;
+
+  private async loadPopular(): Promise<ActionResult<{ titles: Title[] }>> {
+    const titles: Title[] = [];
+    try {
+      const movies = await this.listPopular('movie');
+      const series = await this.listPopular('tv');
+      for (const item of [...movies, ...series]) {
+        const stored = await this.ensureStored(item.id, item.mediaType);
+        if (stored) {
+          titles.push(stored);
+        }
+      }
+    } catch (error) {
+      return { ok: false, error: messageFrom(error) };
+    }
+    if (titles.length === 0) {
+      return { ok: false, error: 'TMDB respondió, pero no se pudo guardar la cartelera.' };
+    }
+    return { ok: true, titles };
+  }
+
+  private async listPopular(mediaType: MediaType): Promise<{ id: number; mediaType: MediaType }[]> {
+    const path = mediaType === 'movie' ? 'movie' : 'tv';
+    const url = new URL(`https://api.themoviedb.org/3/${path}/popular`);
+    url.searchParams.set('api_key', environment.tmdbApiKey);
+    url.searchParams.set('language', 'es-ES');
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`TMDB ${response.status}`);
+    }
+    const body = (await response.json()) as { results?: { id?: number }[] };
+    return (body.results ?? [])
+      .flatMap((item) => (typeof item.id === 'number' && item.id > 0 ? [item.id] : []))
+      .slice(0, 6)
+      .map((id) => ({ id, mediaType }));
   }
 
   private async searchTmdb(query: string): Promise<TmdbListItem[]> {
@@ -157,7 +213,11 @@ export class TitlesService {
     if (!error && data) {
       return mapTitle(data);
     }
-    return this.findStored(tmdbId, mediaType);
+    const saved = await this.findStored(tmdbId, mediaType);
+    if (saved) {
+      return saved;
+    }
+    throw new Error(error?.message || 'No se pudo guardar el título.');
   }
 
   private async findStored(tmdbId: number, mediaType: MediaType): Promise<Title | null> {
@@ -210,6 +270,17 @@ export class TitlesService {
       tmdb_score: roundScore(detail['vote_average']),
     };
   }
+}
+
+function messageFrom(error: unknown): string {
+  const raw = error instanceof Error ? error.message : '';
+  if (raw.startsWith('TMDB')) {
+    return 'No se pudo consultar TMDB. Revisa la clave y tu conexión.';
+  }
+  if (raw.toLowerCase().includes('row-level security') || raw.toLowerCase().includes('jwt')) {
+    return 'No se pudo guardar. Cierra sesión, entra de nuevo e inténtalo.';
+  }
+  return raw.trim() || NETWORK_ERROR;
 }
 
 function text(value: unknown): string {

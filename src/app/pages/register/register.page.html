@@ -1,11 +1,12 @@
 <ion-header>
   <ion-toolbar>
-    <ion-title>Crear cuenta</ion-title>
+    <ion-title>Rotten Potatoes</ion-title>
   </ion-toolbar>
 </ion-header>
 
 <ion-content>
   <form class="form-page stack" [formGroup]="form" (ngSubmit)="submit()">
+    <img class="brand-mark" src="assets/icon/potato.png" alt="Rotten Potatoes" width="72" height="72" />
     <p class="lead">El público y los críticos puntúan por separado.</p>
     <ion-input
       label="Nombre"

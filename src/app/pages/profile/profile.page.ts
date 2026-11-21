@@ -4,6 +4,7 @@ import { Router } from '@angular/router';
 import {
   AlertController,
   IonButton,
+  IonButtons,
   IonContent,
   IonHeader,
   IonInput,
@@ -31,6 +32,7 @@ import { ThemeService } from '../../core/theme.service';
     IonContent,
     IonInput,
     IonButton,
+    IonButtons,
     IonSegment,
     IonSegmentButton,
     IonLabel,

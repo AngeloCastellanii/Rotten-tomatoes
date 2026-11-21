@@ -64,6 +64,22 @@ ion-searchbar {
   gap: 16px;
 }
 
+.brand-mark {
+  display: block;
+  width: 72px;
+  height: 72px;
+  margin-inline: auto;
+  border-radius: 16px;
+}
+
+.toolbar-mark {
+  display: block;
+  width: 28px;
+  height: 28px;
+  margin-inline: 12px 0;
+  border-radius: 6px;
+}
+
 .lead,
 .muted {
   margin: 0;
@@ -197,7 +213,7 @@ ion-searchbar {
 }
 
 .score-pill-audience {
-  color: var(--ion-color-primary);
+  color: var(--rp-audience);
 }
 
 .score-pill-critic {
