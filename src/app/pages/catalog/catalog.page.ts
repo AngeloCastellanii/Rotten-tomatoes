@@ -5,18 +5,13 @@ import {
   IonContent,
   IonHeader,
   IonInput,
-  IonItem,
   IonLabel,
-  IonList,
   IonRange,
   IonSearchbar,
   IonSegment,
   IonSegmentButton,
   IonSelect,
   IonSelectOption,
-  IonSpinner,
-  IonText,
-  IonThumbnail,
   IonTitle,
   IonToolbar,
 } from '@ionic/angular';
@@ -45,12 +40,7 @@ import { LIMITS } from '../../core/limits';
     IonRange,
     IonSegment,
     IonSegmentButton,
-    IonList,
-    IonItem,
     IonLabel,
-    IonThumbnail,
-    IonSpinner,
-    IonText,
   ],
 })
 export class CatalogPage {
@@ -153,6 +143,7 @@ export class CatalogPage {
     this.searched.set(true);
     if (!result.ok) {
       this.error.set(result.error);
+      this.focusError();
       return;
     }
     await this.load();
@@ -166,6 +157,7 @@ export class CatalogPage {
     if (parsedYear.state === 'invalid') {
       this.error.set(parsedYear.error);
       this.loading.set(false);
+      this.focusError();
       return;
     }
 
@@ -185,9 +177,14 @@ export class CatalogPage {
     this.loading.set(false);
     if (!result.ok) {
       this.error.set(result.error);
+      this.focusError();
       return;
     }
     this.error.set('');
     this.titles.set(result.titles);
+  }
+
+  private focusError(): void {
+    setTimeout(() => document.getElementById('form-error')?.focus());
   }
 }

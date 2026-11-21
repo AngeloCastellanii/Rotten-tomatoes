@@ -4,9 +4,9 @@
   </ion-toolbar>
 </ion-header>
 
-<ion-content class="ion-padding">
-  <form class="stack" [formGroup]="form" (ngSubmit)="submit()">
-    <p class="muted">El público y los críticos puntúan por separado.</p>
+<ion-content>
+  <form class="form-page stack" [formGroup]="form" (ngSubmit)="submit()">
+    <p class="lead">El público y los críticos puntúan por separado.</p>
     <ion-input
       label="Nombre"
       labelPlacement="stacked"
@@ -37,7 +37,7 @@
       helperText="Mínimo 6 caracteres."
       formControlName="password"
     ></ion-input>
-    <ion-segment [value]="role()" (ionChange)="onRole($event)">
+    <ion-segment [value]="role()" (ionChange)="onRole($event)" aria-label="Rol">
       <ion-segment-button value="audience">
         <ion-label>Público</ion-label>
       </ion-segment-button>
@@ -46,7 +46,7 @@
       </ion-segment-button>
     </ion-segment>
     @if (error()) {
-      <ion-text color="danger">{{ error() }}</ion-text>
+      <p id="form-error" class="form-error" role="alert" tabindex="-1">{{ error() }}</p>
     }
     <ion-button expand="block" type="submit" [disabled]="busy()">
       {{ busy() ? 'Creando…' : 'Registrarme' }}

@@ -15,7 +15,7 @@ const LANGUAGES: Record<string, string> = {
 export function hideBrokenImage(event: Event): void {
   const image = event.target;
   if (image instanceof HTMLImageElement) {
-    image.style.visibility = 'hidden';
+    image.hidden = true;
   }
 }
 

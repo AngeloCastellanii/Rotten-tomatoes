@@ -4,9 +4,9 @@
   </ion-toolbar>
 </ion-header>
 
-<ion-content class="ion-padding">
-  <form class="stack" [formGroup]="form" (ngSubmit)="submit()">
-    <p class="muted">Entra para ver la cartelera.</p>
+<ion-content>
+  <form class="form-page stack" [formGroup]="form" (ngSubmit)="submit()">
+    <p class="lead">Entra para ver la cartelera.</p>
     <ion-input
       label="Correo"
       labelPlacement="stacked"
@@ -28,7 +28,7 @@
       formControlName="password"
     ></ion-input>
     @if (error()) {
-      <ion-text color="danger">{{ error() }}</ion-text>
+      <p id="form-error" class="form-error" role="alert" tabindex="-1">{{ error() }}</p>
     }
     <ion-button expand="block" type="submit" [disabled]="busy()">
       {{ busy() ? 'Entrando…' : 'Entrar' }}

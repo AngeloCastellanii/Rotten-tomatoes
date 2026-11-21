@@ -1,8 +1,44 @@
 :root {
-  --ion-color-primary: #fa320a;
-  --ion-color-primary-rgb: 250, 50, 10;
+  --ion-font-family: 'Atkinson Hyperlegible', 'Segoe UI', sans-serif;
+  --ion-background-color: #fef2f2;
+  --ion-text-color: #450a0a;
+  --ion-color-primary: #dc2626;
+  --ion-color-primary-rgb: 220, 38, 38;
   --ion-color-primary-contrast: #ffffff;
   --ion-color-primary-contrast-rgb: 255, 255, 255;
-  --ion-color-primary-shade: #dc2c09;
-  --ion-color-primary-tint: #fb4723;
+  --ion-color-primary-shade: #c22222;
+  --ion-color-primary-tint: #e03c3c;
+  --rp-bar: #ffffff;
+  --rp-card: #ffffff;
+  --rp-card-pressed: #fee2e2;
+  --rp-muted: #475569;
+  --rp-border: #fecaca;
+  --rp-accent: #1e40af;
+  --rp-danger: #991b1b;
+  --rp-success: #166534;
+  --rp-poster: #7f1d1d;
+  --rp-on-poster: #fef2f2;
+  color-scheme: light;
+}
+
+.ion-palette-dark {
+  --ion-background-color: #1c1010;
+  --ion-text-color: #fef2f2;
+  --ion-color-primary: #dc2626;
+  --ion-color-primary-rgb: 220, 38, 38;
+  --ion-color-primary-contrast: #ffffff;
+  --ion-color-primary-contrast-rgb: 255, 255, 255;
+  --ion-color-primary-shade: #c22222;
+  --ion-color-primary-tint: #e03c3c;
+  --rp-bar: #1c1010;
+  --rp-card: #2c1818;
+  --rp-card-pressed: #3d2222;
+  --rp-muted: #f3d0d0;
+  --rp-border: #8f5a5a;
+  --rp-accent: #bfdbfe;
+  --rp-danger: #fecaca;
+  --rp-success: #bbf7d0;
+  --rp-poster: #3f1515;
+  --rp-on-poster: #fef2f2;
+  color-scheme: dark;
 }

@@ -12,8 +12,6 @@ import {
   IonLabel,
   IonList,
   IonRange,
-  IonSpinner,
-  IonText,
   IonTextarea,
   IonThumbnail,
   IonTitle,
@@ -38,8 +36,6 @@ import { clampScore } from '../../core/validation';
     IonBackButton,
     IonTitle,
     IonContent,
-    IonSpinner,
-    IonText,
     IonList,
     IonItem,
     IonLabel,
@@ -114,6 +110,7 @@ export class TitlePage {
     this.busy.set(false);
     if (!result.ok) {
       this.error.set(result.error);
+      setTimeout(() => document.getElementById('form-error')?.focus());
       return;
     }
     this.notice.set(this.ownReview() ? 'Reseña actualizada.' : 'Reseña publicada.');

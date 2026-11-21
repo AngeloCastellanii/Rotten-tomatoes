@@ -1,67 +1,207 @@
-/*
- * App Global CSS
- * ----------------------------------------------------------------------------
- * Put style rules here that you want to apply globally. These styles are for
- * the entire app and not just one component. Additionally, this file can be
- * used as an entry point to import other CSS/Sass files to be included in the
- * output CSS.
- * For more information on global stylesheets, visit the documentation:
- * https://ionicframework.com/docs/layout/global-stylesheets
- */
-
-/* Core CSS required for Ionic components to work properly */
-@import "@ionic/angular/css/core.css";
-
-/* Basic CSS for apps built with Ionic */
-@import "@ionic/angular/css/normalize.css";
-@import "@ionic/angular/css/structure.css";
-@import "@ionic/angular/css/typography.css";
-@import "@ionic/angular/css/display.css";
-
-/* Optional CSS utils that can be commented out */
-@import "@ionic/angular/css/padding.css";
-@import "@ionic/angular/css/float-elements.css";
-@import "@ionic/angular/css/text-alignment.css";
-@import "@ionic/angular/css/text-transformation.css";
-@import "@ionic/angular/css/flex-utils.css";
-
-/**
- * Ionic Dark Mode
- * -----------------------------------------------------
- * For more info, please see:
- * https://ionicframework.com/docs/theming/dark-mode
- */
-
+@import '@ionic/angular/css/core.css';
+@import '@ionic/angular/css/normalize.css';
+@import '@ionic/angular/css/structure.css';
+@import '@ionic/angular/css/typography.css';
+@import '@ionic/angular/css/display.css';
+@import '@ionic/angular/css/padding.css';
+@import '@ionic/angular/css/float-elements.css';
+@import '@ionic/angular/css/text-alignment.css';
+@import '@ionic/angular/css/text-transformation.css';
+@import '@ionic/angular/css/flex-utils.css';
 @import '@ionic/angular/css/palettes/dark.class.css';
+
+ion-toolbar {
+  --background: var(--rp-bar);
+  --color: var(--ion-text-color);
+  --border-color: var(--rp-border);
+}
+
+ion-title {
+  font-weight: 700;
+}
+
+ion-tab-bar {
+  --background: var(--rp-bar);
+  --border: 1px solid var(--rp-border);
+  --color: var(--rp-muted);
+  --color-selected: var(--ion-color-primary);
+}
+
+ion-content {
+  --background: var(--ion-background-color);
+  --color: var(--ion-text-color);
+}
+
+ion-item {
+  --background: var(--rp-card);
+  --color: var(--ion-text-color);
+  --border-color: var(--rp-border);
+}
+
+ion-searchbar {
+  padding: 0;
+  --background: var(--rp-card);
+  --color: var(--ion-text-color);
+  --placeholder-color: var(--rp-muted);
+  --border-radius: 8px;
+  --box-shadow: none;
+}
+
+.page,
+.form-page {
+  width: min(100%, 720px);
+  margin-inline: auto;
+  padding: 16px 16px 32px;
+}
+
+.form-page {
+  width: min(100%, 440px);
+}
 
 .stack {
   display: flex;
   flex-direction: column;
-  gap: 14px;
-  width: min(100%, 440px);
-  margin: 8px auto 0;
+  gap: 16px;
 }
 
+.lead,
 .muted {
-  color: var(--ion-color-medium);
-}
-
-.poster {
-  display: block;
-  width: 100%;
-  max-height: 420px;
-  object-fit: contain;
-  background: #141414;
-}
-
-.sheet-title {
-  margin: 0 0 4px;
-  font-size: 1.45rem;
+  margin: 0;
+  color: var(--rp-muted);
+  line-height: 1.5;
 }
 
 .section-title {
-  margin: 4px 0;
-  font-size: 1.05rem;
+  margin: 8px 0 0;
+  font-size: 1.125rem;
+  line-height: 1.4;
+}
+
+.form-error,
+.form-success {
+  margin: 0;
+  font-weight: 700;
+  line-height: 1.5;
+}
+
+.form-error {
+  color: var(--rp-danger);
+}
+
+.form-success {
+  color: var(--rp-success);
+}
+
+.filters {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.catalog-grid,
+.review-list {
+  display: grid;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.title-card,
+.review-card,
+.detail-block {
+  background: var(--rp-card);
+  border: 1px solid var(--rp-border);
+  border-radius: 8px;
+}
+
+.title-card {
+  display: flex;
+  gap: 12px;
+  min-height: 48px;
+  padding: 12px;
+  color: inherit;
+  text-decoration: none;
+}
+
+.title-card:active {
+  background: var(--rp-card-pressed);
+}
+
+.title-card h2,
+.review-card h2,
+.sheet-title {
+  margin: 0;
+  font-size: 1.125rem;
+  line-height: 1.3;
+}
+
+.title-card p,
+.review-card p {
+  margin: 4px 0 0;
+}
+
+.poster-frame {
+  position: relative;
+  overflow: hidden;
+  background: var(--rp-poster);
+}
+
+.poster-frame-thumb {
+  width: 72px;
+  height: 108px;
+  flex: none;
+}
+
+.poster-frame-hero {
+  width: min(100%, 280px);
+  aspect-ratio: 2 / 3;
+  margin-inline: auto;
+}
+
+.poster-frame img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.poster-fallback {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: flex-end;
+  padding: 8px;
+  color: var(--rp-on-poster);
+  font-weight: 700;
+}
+
+.poster-frame:has(img:not([hidden])) .poster-fallback {
+  display: none;
+}
+
+.score-line {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.score-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  padding: 4px 8px;
+  border: 1px solid var(--rp-border);
+  border-radius: 8px;
+  font-weight: 700;
+}
+
+.score-pill-audience {
+  color: var(--ion-color-primary);
+}
+
+.score-pill-critic {
+  color: var(--rp-accent);
 }
 
 .score-row {
@@ -73,24 +213,112 @@
 .score-card {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 4px;
   min-width: 0;
-  padding: 10px;
-  border-radius: 12px;
-  background: rgba(var(--ion-color-primary-rgb), 0.1);
+  min-height: 72px;
+  padding: 12px;
+  border: 1px solid var(--rp-border);
+  border-radius: 8px;
+  background: var(--rp-card);
 }
 
 .score-value {
-  font-size: 1.15rem;
+  font-size: 1.25rem;
   font-weight: 700;
-  color: var(--ion-color-primary);
 }
 
-.row-actions {
+.detail {
   display: flex;
   flex-direction: column;
+  gap: 24px;
+  width: min(100%, 640px);
+  margin-inline: auto;
+  padding: 16px 16px 32px;
 }
 
-ion-thumbnail img {
-  object-fit: cover;
+.detail-block {
+  padding: 16px;
+}
+
+.review-card {
+  padding: 12px;
+}
+
+.review-link {
+  display: flex;
+  gap: 12px;
+  color: inherit;
+  text-decoration: none;
+}
+
+.review-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.review-actions ion-button {
+  flex: 1;
+  min-height: 48px;
+}
+
+.empty-state {
+  margin-top: 24px;
+  padding: 24px 16px;
+  text-align: center;
+}
+
+.skeleton-list {
+  display: grid;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.skeleton {
+  height: 132px;
+  border-radius: 8px;
+  background: var(--rp-border);
+}
+
+@media (min-width: 768px) {
+  .page {
+    padding-inline: 24px;
+  }
+
+  .catalog-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .title-card,
+  .review-link {
+    transition: background-color 180ms ease;
+  }
+
+  .skeleton {
+    animation: rp-pulse 1.2s ease-in-out infinite;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .title-card,
+  .review-link,
+  .skeleton {
+    animation: none;
+    transition: none;
+  }
+}
+
+@keyframes rp-pulse {
+  50% {
+    opacity: 0.55;
+  }
+}
+
+a.title-card:focus-visible,
+.review-link:focus-visible,
+.form-error:focus {
+  outline: 2px solid var(--rp-accent);
+  outline-offset: 2px;
 }

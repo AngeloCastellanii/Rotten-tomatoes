@@ -97,7 +97,7 @@ export class AuthService {
         return {
           ok: false,
           error:
-            'Revisa tu correo para confirmar la cuenta, o desactiva Confirm email en Supabase.',
+            'La cuenta ya existe. En Supabase abre Authentication, Providers, Email y apaga Confirm email. Después entra con Ya tengo cuenta.',
         };
       }
 

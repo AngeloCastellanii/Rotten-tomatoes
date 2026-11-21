@@ -9,7 +9,6 @@ import {
   IonLabel,
   IonSegment,
   IonSegmentButton,
-  IonText,
   IonTitle,
   IonToolbar,
 } from '@ionic/angular';
@@ -29,7 +28,6 @@ import type { UserRole } from '../../core/models';
     IonContent,
     IonInput,
     IonButton,
-    IonText,
     IonSegment,
     IonSegmentButton,
     IonLabel,
@@ -67,6 +65,7 @@ export class RegisterPage {
     this.busy.set(false);
     if (!result.ok) {
       this.error.set(result.error);
+      setTimeout(() => document.getElementById('form-error')?.focus());
       return;
     }
     await this.router.navigateByUrl('/tabs/catalog');

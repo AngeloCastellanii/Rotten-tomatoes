@@ -11,7 +11,6 @@ import {
   IonLabel,
   IonSegment,
   IonSegmentButton,
-  IonText,
   IonTitle,
   IonToggle,
   IonToolbar,
@@ -32,7 +31,6 @@ import { ThemeService } from '../../core/theme.service';
     IonContent,
     IonInput,
     IonButton,
-    IonText,
     IonSegment,
     IonSegmentButton,
     IonLabel,
@@ -76,6 +74,7 @@ export class ProfilePage {
     this.busy.set(false);
     if (!result.ok) {
       this.error.set(result.error);
+      setTimeout(() => document.getElementById('form-error')?.focus());
       return;
     }
     this.form.controls.password.setValue('');

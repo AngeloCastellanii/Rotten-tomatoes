@@ -9,20 +9,24 @@
 
 <ion-content>
   @if (loading()) {
-    <div class="ion-text-center ion-padding">
-      <ion-spinner name="crescent"></ion-spinner>
+    <div class="detail" aria-busy="true" aria-label="Cargando ficha">
+      <div class="skeleton"></div>
     </div>
   } @else if (!title()) {
-    <p class="ion-padding ion-text-center">{{ error() || 'No se encontró el título.' }}</p>
+    <div class="empty-state" role="status">
+      <h1 class="section-title">No se encontró</h1>
+      <p class="muted">{{ error() || 'Ese título no está en la cartelera.' }}</p>
+    </div>
   } @else {
-    @if (title()?.posterUrl; as poster) {
-      <img class="poster" [src]="poster" [alt]="'Carátula de ' + title()?.name" (error)="hideBroken($event)" />
-    } @else {
-      <p class="ion-padding muted">Sin carátula.</p>
-    }
+    <article class="detail">
+      <div class="poster-frame poster-frame-hero">
+        @if (title()?.posterUrl; as poster) {
+          <img [src]="poster" [alt]="'Carátula de ' + title()?.name" (error)="hideBroken($event)" />
+        }
+        <span class="poster-fallback">{{ kind(title()!.mediaType) }}</span>
+      </div>
 
-    <div class="ion-padding stack">
-      <div>
+      <header>
         <h1 class="sheet-title">{{ title()?.name }}</h1>
         <p class="muted">
           {{ kind(title()!.mediaType) }} · {{ dateText(title()!.releaseDate) }} ·
@@ -31,15 +35,15 @@
         @if (title()!.genres.length) {
           <p>{{ title()!.genres.join(' · ') }}</p>
         }
-      </div>
+      </header>
 
       <div class="score-row">
         <div class="score-card">
-          <span class="score-value">{{ scoreText(title()!.audienceScore) }}</span>
+          <span class="score-value score-pill-audience">{{ scoreText(title()!.audienceScore) }}</span>
           <span class="muted">Público · {{ title()!.audienceCount }}</span>
         </div>
         <div class="score-card">
-          <span class="score-value">{{ scoreText(title()!.criticScore) }}</span>
+          <span class="score-value score-pill-critic">{{ scoreText(title()!.criticScore) }}</span>
           <span class="muted">Críticos · {{ title()!.criticCount }}</span>
         </div>
         <div class="score-card">
@@ -48,7 +52,7 @@
         </div>
       </div>
 
-      <section>
+      <section class="detail-block">
         <h2 class="section-title">Sinopsis</h2>
         <p>{{ title()!.overview || 'Sin sinopsis.' }}</p>
       </section>
@@ -59,11 +63,11 @@
           <p class="muted">Sin reparto.</p>
         } @else {
           <ion-list lines="full">
-            @for (person of title()!.cast; track $index) {
+            @for (person of title()!.cast; track person.name) {
               <ion-item>
                 @if (person.profileUrl) {
                   <ion-thumbnail slot="start">
-                    <img [src]="person.profileUrl" [alt]="person.name" (error)="hideBroken($event)" />
+                    <img [src]="person.profileUrl" [alt]="''" (error)="hideBroken($event)" />
                   </ion-thumbnail>
                 }
                 <ion-label>
@@ -76,13 +80,13 @@
         }
       </section>
 
-      <section>
+      <section class="detail-block stack">
         <h2 class="section-title">Tu reseña</h2>
         <p class="muted">
           {{
             auth.user()?.role === 'critic'
-              ? 'Cuenta para el puntaje de críticos.'
-              : 'Cuenta para el puntaje del público.'
+              ? 'Suma al puntaje de críticos.'
+              : 'Suma al puntaje del público.'
           }}
         </p>
         <ion-textarea
@@ -96,7 +100,7 @@
         ></ion-textarea>
         <p class="muted">{{ body().trim().length }}/{{ limits.review.max }} caracteres.</p>
         <ion-range
-          aria-label="Puntaje"
+          aria-label="Puntaje de tu reseña"
           [min]="0"
           [max]="100"
           [pin]="true"
@@ -105,10 +109,10 @@
         ></ion-range>
         <p class="muted">Puntaje: {{ score() }}</p>
         @if (error()) {
-          <ion-text color="danger">{{ error() }}</ion-text>
+          <p id="form-error" class="form-error" role="alert" tabindex="-1">{{ error() }}</p>
         }
         @if (notice()) {
-          <ion-text color="success">{{ notice() }}</ion-text>
+          <p class="form-success" role="status">{{ notice() }}</p>
         }
         <ion-button expand="block" (click)="save()" [disabled]="busy() || body().trim().length < limits.review.min">
           {{ ownReview() ? 'Guardar reseña' : 'Publicar reseña' }}
@@ -125,18 +129,17 @@
         @if (reviews().length === 0) {
           <p class="muted">Todavía no hay reseñas.</p>
         } @else {
-          <ion-list lines="full">
+          <div class="review-list">
             @for (review of reviews(); track review.id) {
-              <ion-item>
-                <ion-label>
-                  <h3>{{ review.authorName }} · {{ roleText(review.authorRole) }}</h3>
-                  <p>{{ review.score }} · {{ review.body }}</p>
-                </ion-label>
-              </ion-item>
+              <article class="review-card">
+                <h3>{{ review.authorName }}</h3>
+                <p class="muted">{{ roleText(review.authorRole) }} · {{ review.score }}</p>
+                <p>{{ review.body }}</p>
+              </article>
             }
-          </ion-list>
+          </div>
         }
       </section>
-    </div>
+    </article>
   }
 </ion-content>

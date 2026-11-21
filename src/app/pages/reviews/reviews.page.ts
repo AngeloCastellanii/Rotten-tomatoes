@@ -5,12 +5,6 @@ import {
   IonButton,
   IonContent,
   IonHeader,
-  IonItem,
-  IonLabel,
-  IonList,
-  IonSpinner,
-  IonText,
-  IonThumbnail,
   IonTitle,
   IonToolbar,
 } from '@ionic/angular';
@@ -29,13 +23,7 @@ import { ReviewsService } from '../../core/reviews.service';
     IonToolbar,
     IonTitle,
     IonContent,
-    IonList,
-    IonItem,
-    IonLabel,
-    IonThumbnail,
     IonButton,
-    IonSpinner,
-    IonText,
   ],
 })
 export class ReviewsPage {

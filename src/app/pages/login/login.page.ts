@@ -6,7 +6,6 @@ import {
   IonContent,
   IonHeader,
   IonInput,
-  IonText,
   IonTitle,
   IonToolbar,
 } from '@ionic/angular';
@@ -25,7 +24,6 @@ import { AuthService } from '../../core/auth.service';
     IonContent,
     IonInput,
     IonButton,
-    IonText,
   ],
 })
 export class LoginPage {
@@ -50,6 +48,7 @@ export class LoginPage {
     this.busy.set(false);
     if (!result.ok) {
       this.error.set(result.error);
+      setTimeout(() => document.getElementById('form-error')?.focus());
       return;
     }
     await this.router.navigateByUrl('/tabs/catalog');

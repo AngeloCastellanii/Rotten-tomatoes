@@ -4,8 +4,9 @@
   </ion-toolbar>
 </ion-header>
 
-<ion-content class="ion-padding">
-  <form class="stack" [formGroup]="form" (ngSubmit)="save()">
+<ion-content>
+  <form class="form-page stack" [formGroup]="form" (ngSubmit)="save()">
+    <h2 class="section-title">Cuenta</h2>
     <ion-input
       label="Nombre"
       labelPlacement="stacked"
@@ -44,27 +45,27 @@
       </ion-segment-button>
     </ion-segment>
     @if (error()) {
-      <ion-text color="danger">{{ error() }}</ion-text>
+      <p id="form-error" class="form-error" role="alert" tabindex="-1">{{ error() }}</p>
     }
     @if (notice()) {
-      <ion-text color="success">{{ notice() }}</ion-text>
+      <p class="form-success" role="status">{{ notice() }}</p>
     }
     <ion-button expand="block" type="submit" [disabled]="busy()">Guardar</ion-button>
   </form>
 
-  <ion-item lines="none" class="ion-margin-top">
-    <ion-toggle
-      [checked]="theme.dark()"
-      (ionChange)="theme.setDark($any($event.detail.checked))"
-    >
-      Tema oscuro
-    </ion-toggle>
-  </ion-item>
-
-  <div class="stack">
+  <section class="form-page stack">
+    <h2 class="section-title">Preferencias</h2>
+    <ion-item lines="none">
+      <ion-toggle
+        [checked]="theme.dark()"
+        (ionChange)="theme.setDark($any($event.detail.checked))"
+      >
+        Tema oscuro
+      </ion-toggle>
+    </ion-item>
     <ion-button expand="block" fill="outline" (click)="logout()">Cerrar sesión</ion-button>
     <ion-button expand="block" color="danger" fill="clear" (click)="confirmDelete()">
       Borrar cuenta
     </ion-button>
-  </div>
+  </section>
 </ion-content>

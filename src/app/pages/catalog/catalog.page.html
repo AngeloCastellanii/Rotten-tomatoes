@@ -5,9 +5,10 @@
 </ion-header>
 
 <ion-content>
-  <div class="ion-padding stack">
-    <form (submit)="search($event)">
+  <div class="page">
+    <form class="stack" (submit)="search($event)">
       <ion-searchbar
+        aria-label="Nombre de la película o serie"
         [value]="query()"
         placeholder="Nombre de la película o serie"
         [attr.maxlength]="limits.search.max"
@@ -15,104 +16,119 @@
         (ionInput)="onQuery($event)"
         (keyup.enter)="search()"
       ></ion-searchbar>
-      <ion-button class="ion-margin-top" expand="block" type="submit" [disabled]="busy()">
+      <ion-button expand="block" type="submit" [disabled]="busy()">
         {{ busy() ? 'Buscando…' : 'Buscar y guardar' }}
       </ion-button>
     </form>
 
-    <ion-select
-      label="Género"
-      labelPlacement="stacked"
-      interface="popover"
-      fill="outline"
-      [value]="genre()"
-      (ionChange)="onGenre($event)"
-    >
-      <ion-select-option value="">Todos</ion-select-option>
-      @for (item of genres; track item.id) {
-        <ion-select-option [value]="item.id">{{ item.label }}</ion-select-option>
-      }
-    </ion-select>
+    <section class="filters" aria-label="Filtros de la cartelera">
+      <h2 class="section-title">Filtros</h2>
+      <ion-select
+        label="Género"
+        labelPlacement="stacked"
+        interface="popover"
+        fill="outline"
+        [value]="genre()"
+        (ionChange)="onGenre($event)"
+      >
+        <ion-select-option value="">Todos</ion-select-option>
+        @for (item of genres; track item.id) {
+          <ion-select-option [value]="item.id">{{ item.label }}</ion-select-option>
+        }
+      </ion-select>
 
-    <ion-input
-      label="Año de estreno"
-      labelPlacement="stacked"
-      type="text"
-      inputmode="numeric"
-      [maxlength]="4"
-      fill="outline"
-      [value]="year()"
-      (ionInput)="onYear($event)"
-    ></ion-input>
+      <ion-input
+        label="Año de estreno"
+        labelPlacement="stacked"
+        type="text"
+        inputmode="numeric"
+        [maxlength]="4"
+        fill="outline"
+        [value]="year()"
+        (ionInput)="onYear($event)"
+      ></ion-input>
 
-    <div>
-      <ion-range
-        aria-label="Puntaje mínimo"
-        [min]="0"
-        [max]="100"
-        [pin]="true"
-        [value]="minScore()"
-        (ionChange)="onMin($event)"
-      ></ion-range>
-      <p class="muted">
-        Mínimo {{ scoreKind() === 'critic' ? 'de críticos' : 'del público' }}: {{ minScore() }}
-      </p>
-    </div>
+      <div>
+        <ion-range
+          aria-label="Puntaje mínimo"
+          [min]="0"
+          [max]="100"
+          [pin]="true"
+          [value]="minScore()"
+          (ionChange)="onMin($event)"
+        ></ion-range>
+        <p class="muted">
+          Mínimo {{ scoreKind() === 'critic' ? 'de críticos' : 'del público' }}: {{ minScore() }}
+        </p>
+      </div>
 
-    <ion-segment [value]="scoreKind()" (ionChange)="onScoreKind($event)" aria-label="Qué puntaje usar">
-      <ion-segment-button value="audience">
-        <ion-label>Público</ion-label>
-      </ion-segment-button>
-      <ion-segment-button value="critic">
-        <ion-label>Críticos</ion-label>
-      </ion-segment-button>
-    </ion-segment>
+      <ion-segment [value]="scoreKind()" (ionChange)="onScoreKind($event)" aria-label="Qué puntaje usar">
+        <ion-segment-button value="audience">
+          <ion-label>Público</ion-label>
+        </ion-segment-button>
+        <ion-segment-button value="critic">
+          <ion-label>Críticos</ion-label>
+        </ion-segment-button>
+      </ion-segment>
 
-    <ion-segment [value]="sort()" (ionChange)="onSort($event)" aria-label="Orden">
-      <ion-segment-button value="score">
-        <ion-label>Puntaje</ion-label>
-      </ion-segment-button>
-      <ion-segment-button value="date">
-        <ion-label>Fecha</ion-label>
-      </ion-segment-button>
-    </ion-segment>
+      <ion-segment [value]="sort()" (ionChange)="onSort($event)" aria-label="Orden">
+        <ion-segment-button value="score">
+          <ion-label>Puntaje</ion-label>
+        </ion-segment-button>
+        <ion-segment-button value="date">
+          <ion-label>Fecha</ion-label>
+        </ion-segment-button>
+      </ion-segment>
 
-    <p class="muted">El puntaje mínimo y el orden usan los promedios de reseñas, no el de TMDB.</p>
+      <p class="muted">El mínimo y el orden usan las reseñas, no el puntaje de TMDB.</p>
+    </section>
+
     @if (error()) {
-      <ion-text color="danger">{{ error() }}</ion-text>
+      <p id="form-error" class="form-error" role="alert" tabindex="-1">{{ error() }}</p>
+    }
+
+    @if (loading() || busy()) {
+      <div class="skeleton-list" aria-busy="true" aria-label="Cargando cartelera">
+        <div class="skeleton"></div>
+        <div class="skeleton"></div>
+        <div class="skeleton"></div>
+      </div>
+    } @else if (titles().length === 0) {
+      <div class="empty-state" role="status">
+        <h2 class="section-title">
+          {{ searched() ? 'Sin resultados' : filtering() ? 'Nada coincide' : 'Cartelera vacía' }}
+        </h2>
+        <p class="muted">
+          {{
+            searched()
+              ? 'Prueba con otro nombre.'
+              : filtering()
+                ? 'Quita un filtro para ver más títulos.'
+                : 'Cuando guardes una búsqueda, el título aparece aquí.'
+          }}
+        </p>
+      </div>
+    } @else {
+      <div class="catalog-grid">
+        @for (title of titles(); track title.id) {
+          <a class="title-card" [routerLink]="['/tabs/title', title.id]">
+            <div class="poster-frame poster-frame-thumb">
+              @if (title.posterUrl) {
+                <img [src]="title.posterUrl" [alt]="'Carátula de ' + title.name" (error)="hideBroken($event)" />
+              }
+              <span class="poster-fallback">{{ kind(title.mediaType) }}</span>
+            </div>
+            <div>
+              <h2>{{ title.name }}</h2>
+              <p class="muted">{{ kind(title.mediaType) }} · {{ yearText(title.releaseDate) }}</p>
+              <p class="score-line">
+                <span class="score-pill score-pill-audience">Público {{ scoreText(title.audienceScore) }}</span>
+                <span class="score-pill score-pill-critic">Críticos {{ scoreText(title.criticScore) }}</span>
+              </p>
+            </div>
+          </a>
+        }
+      </div>
     }
   </div>
-
-  @if (loading() || busy()) {
-    <div class="ion-text-center ion-padding">
-      <ion-spinner name="crescent"></ion-spinner>
-    </div>
-  } @else if (titles().length === 0) {
-    <p class="ion-padding ion-text-center muted">
-      {{
-        searched()
-          ? 'No hubo resultados.'
-          : filtering()
-            ? 'Ningún título coincide con esos filtros.'
-            : 'Nada guardado todavía.'
-      }}
-    </p>
-  } @else {
-    <ion-list lines="full">
-      @for (title of titles(); track title.id) {
-        <ion-item button [routerLink]="['/tabs/title', title.id]">
-          <ion-thumbnail slot="start">
-            @if (title.posterUrl) {
-              <img [src]="title.posterUrl" [alt]="'Carátula de ' + title.name" (error)="hideBroken($event)" />
-            }
-          </ion-thumbnail>
-          <ion-label>
-            <h2>{{ title.name }}</h2>
-            <p>{{ kind(title.mediaType) }} · {{ yearText(title.releaseDate) }}</p>
-            <p>Público {{ scoreText(title.audienceScore) }} · Críticos {{ scoreText(title.criticScore) }}</p>
-          </ion-label>
-        </ion-item>
-      }
-    </ion-list>
-  }
 </ion-content>

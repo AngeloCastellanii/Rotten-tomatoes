@@ -6,35 +6,41 @@
 
 <ion-content>
   @if (loading()) {
-    <div class="ion-text-center ion-padding">
-      <ion-spinner name="crescent"></ion-spinner>
+    <div class="page" aria-busy="true" aria-label="Cargando reseñas">
+      <div class="skeleton"></div>
     </div>
   } @else if (error()) {
-    <p class="ion-padding ion-text-center">
-      <ion-text color="danger">{{ error() }}</ion-text>
-    </p>
+    <div class="page">
+      <p id="form-error" class="form-error" role="alert" tabindex="-1">{{ error() }}</p>
+    </div>
   } @else if (reviews().length === 0) {
-    <p class="ion-padding ion-text-center muted">Todavía no escribes reseñas.</p>
+    <div class="empty-state" role="status">
+      <h2 class="section-title">Sin reseñas</h2>
+      <p class="muted">Las que publiques aparecen aquí.</p>
+    </div>
   } @else {
-    <ion-list lines="full">
+    <div class="page review-list">
       @for (review of reviews(); track review.id) {
-        <ion-item>
-          @if (review.posterUrl) {
-            <ion-thumbnail slot="start">
-              <img [src]="review.posterUrl" [alt]="'Carátula de ' + review.titleName" />
-            </ion-thumbnail>
-          }
-          <ion-label>
-            <h2>{{ review.titleName || 'Título' }}</h2>
-            <p>{{ roleText(review.authorRole) }} · {{ review.score }}</p>
-            <p>{{ review.body }}</p>
-          </ion-label>
-          <div slot="end" class="row-actions">
-            <ion-button fill="clear" [routerLink]="['/tabs/title', review.titleId]">Editar</ion-button>
+        <article class="review-card">
+          <a class="review-link" [routerLink]="['/tabs/title', review.titleId]">
+            <div class="poster-frame poster-frame-thumb">
+              @if (review.posterUrl) {
+                <img [src]="review.posterUrl" [alt]="'Carátula de ' + review.titleName" />
+              }
+              <span class="poster-fallback">Ficha</span>
+            </div>
+            <div>
+              <h2>{{ review.titleName || 'Título' }}</h2>
+              <p class="muted">{{ roleText(review.authorRole) }} · {{ review.score }}</p>
+              <p>{{ review.body }}</p>
+            </div>
+          </a>
+          <div class="review-actions">
+            <ion-button fill="outline" [routerLink]="['/tabs/title', review.titleId]">Editar</ion-button>
             <ion-button fill="clear" color="danger" (click)="confirmDelete(review)">Borrar</ion-button>
           </div>
-        </ion-item>
+        </article>
       }
-    </ion-list>
+    </div>
   }
 </ion-content>
