@@ -1,0 +1,64 @@
+import { LIMITS } from './limits';
+import type { UserRole } from './models';
+import { normalizeText } from './text';
+
+export interface ValidationResult {
+  ok: boolean;
+  error?: string;
+}
+
+const EMAIL_REGEX =
+  /^[a-z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)+$/i;
+
+export function validateName(value: string): ValidationResult {
+  const name = normalizeText(value);
+  if (name.length < LIMITS.name.min) {
+    return { ok: false, error: `El nombre debe tener al menos ${LIMITS.name.min} caracteres.` };
+  }
+  if (name.length > LIMITS.name.max) {
+    return { ok: false, error: `El nombre no puede superar ${LIMITS.name.max} caracteres.` };
+  }
+  return { ok: true };
+}
+
+export function validateEmail(value: string): ValidationResult {
+  const email = normalizeText(value).toLowerCase();
+  if (email.length < LIMITS.email.min || !EMAIL_REGEX.test(email)) {
+    return {
+      ok: false,
+      error: 'Ingresa un correo válido (ej: tu@correo.com, nombre@empresa.net).',
+    };
+  }
+  return { ok: true };
+}
+
+export function validatePassword(value: string): ValidationResult {
+  if (value.length < LIMITS.password.min) {
+    return {
+      ok: false,
+      error: `La contraseña debe tener al menos ${LIMITS.password.min} caracteres.`,
+    };
+  }
+  if (value.length > LIMITS.password.max) {
+    return {
+      ok: false,
+      error: `La contraseña no puede superar ${LIMITS.password.max} caracteres.`,
+    };
+  }
+  return { ok: true };
+}
+
+export function validateRole(value: string): value is UserRole {
+  return value === 'audience' || value === 'critic';
+}
+
+export function validateSearch(value: string): ValidationResult {
+  const query = normalizeText(value);
+  if (query.length < LIMITS.search.min) {
+    return { ok: false, error: `Escribe al menos ${LIMITS.search.min} caracteres.` };
+  }
+  if (query.length > LIMITS.search.max) {
+    return { ok: false, error: `La búsqueda no puede superar ${LIMITS.search.max} caracteres.` };
+  }
+  return { ok: true };
+}

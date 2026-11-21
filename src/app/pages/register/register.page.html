@@ -1,0 +1,50 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-title>Crear cuenta</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+  <form class="stack" [formGroup]="form" (ngSubmit)="submit()">
+    <p class="muted">El público y los críticos puntúan por separado.</p>
+    <ion-input
+      label="Nombre"
+      labelPlacement="stacked"
+      autocomplete="name"
+      fill="outline"
+      formControlName="name"
+    ></ion-input>
+    <ion-input
+      label="Correo"
+      labelPlacement="stacked"
+      type="email"
+      inputmode="email"
+      autocomplete="email"
+      fill="outline"
+      formControlName="email"
+    ></ion-input>
+    <ion-input
+      label="Contraseña"
+      labelPlacement="stacked"
+      type="password"
+      autocomplete="new-password"
+      fill="outline"
+      formControlName="password"
+    ></ion-input>
+    <ion-segment [value]="role()" (ionChange)="onRole($event)">
+      <ion-segment-button value="audience">
+        <ion-label>Público</ion-label>
+      </ion-segment-button>
+      <ion-segment-button value="critic">
+        <ion-label>Crítico</ion-label>
+      </ion-segment-button>
+    </ion-segment>
+    @if (error()) {
+      <ion-text color="danger">{{ error() }}</ion-text>
+    }
+    <ion-button expand="block" type="submit" [disabled]="busy()">
+      {{ busy() ? 'Creando…' : 'Registrarme' }}
+    </ion-button>
+    <ion-button expand="block" fill="clear" routerLink="/login">Ya tengo cuenta</ion-button>
+  </form>
+</ion-content>

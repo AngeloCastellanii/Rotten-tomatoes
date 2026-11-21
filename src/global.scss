@@ -32,6 +32,16 @@
  * https://ionicframework.com/docs/theming/dark-mode
  */
 
-/* @import "@ionic/angular/css/palettes/dark.always.css"; */
-/* @import "@ionic/angular/css/palettes/dark.class.css"; */
-@import '@ionic/angular/css/palettes/dark.system.css';
+@import '@ionic/angular/css/palettes/dark.class.css';
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: min(100%, 440px);
+  margin: 8px auto 0;
+}
+
+.muted {
+  color: var(--ion-color-medium);
+}

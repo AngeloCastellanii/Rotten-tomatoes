@@ -1,0 +1,35 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-title>Entrar</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+  <form class="stack" [formGroup]="form" (ngSubmit)="submit()">
+    <p class="muted">Entra para ver la cartelera.</p>
+    <ion-input
+      label="Correo"
+      labelPlacement="stacked"
+      type="email"
+      inputmode="email"
+      autocomplete="email"
+      fill="outline"
+      formControlName="email"
+    ></ion-input>
+    <ion-input
+      label="Contraseña"
+      labelPlacement="stacked"
+      type="password"
+      autocomplete="current-password"
+      fill="outline"
+      formControlName="password"
+    ></ion-input>
+    @if (error()) {
+      <ion-text color="danger">{{ error() }}</ion-text>
+    }
+    <ion-button expand="block" type="submit" [disabled]="busy()">
+      {{ busy() ? 'Entrando…' : 'Entrar' }}
+    </ion-button>
+    <ion-button expand="block" fill="clear" routerLink="/register">Crear cuenta</ion-button>
+  </form>
+</ion-content>

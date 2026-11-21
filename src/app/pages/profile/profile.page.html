@@ -1,0 +1,66 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-title>Perfil</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+  <form class="stack" [formGroup]="form" (ngSubmit)="save()">
+    <ion-input
+      label="Nombre"
+      labelPlacement="stacked"
+      autocomplete="name"
+      fill="outline"
+      formControlName="name"
+    ></ion-input>
+    <ion-input
+      label="Correo"
+      labelPlacement="stacked"
+      type="email"
+      inputmode="email"
+      autocomplete="email"
+      fill="outline"
+      formControlName="email"
+    ></ion-input>
+    <ion-input
+      label="Nueva contraseña"
+      labelPlacement="stacked"
+      type="password"
+      autocomplete="new-password"
+      fill="outline"
+      formControlName="password"
+      helperText="Déjala vacía si no quieres cambiarla."
+    ></ion-input>
+    <ion-segment [value]="role()" (ionChange)="onRole($event)" aria-label="Rol">
+      <ion-segment-button value="audience">
+        <ion-label>Público</ion-label>
+      </ion-segment-button>
+      <ion-segment-button value="critic">
+        <ion-label>Crítico</ion-label>
+      </ion-segment-button>
+    </ion-segment>
+    @if (error()) {
+      <ion-text color="danger">{{ error() }}</ion-text>
+    }
+    @if (notice()) {
+      <ion-text color="success">{{ notice() }}</ion-text>
+    }
+    <ion-button expand="block" type="submit" [disabled]="busy()">Guardar</ion-button>
+  </form>
+
+  <ion-item lines="none" class="ion-margin-top">
+    <ion-toggle
+      [checked]="theme.dark()"
+      (ionChange)="theme.setDark($any($event.detail.checked))"
+    >
+      Tema oscuro
+    </ion-toggle>
+  </ion-item>
+
+  <div class="stack">
+    <ion-button expand="block" fill="outline" (click)="logout()">Cerrar sesión</ion-button>
+    <ion-button expand="block" color="danger" fill="clear" (click)="confirmDelete()">
+      Borrar cuenta
+    </ion-button>
+  </div>
+</ion-content>
