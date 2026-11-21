@@ -98,7 +98,10 @@
         </ion-segment-button>
       </ion-segment>
 
-      <p class="muted">El mínimo y el orden usan las reseñas, no el puntaje de TMDB.</p>
+      <p class="muted">
+        Sin filtros, el orden sale de TMDB: tendencias, próximos, estrenos y mejor valorados. Con
+        filtros, manda el puntaje de las reseñas o la fecha.
+      </p>
     </section>
 
     @if (error()) {
@@ -111,25 +114,28 @@
         <div class="skeleton"></div>
         <div class="skeleton"></div>
       </div>
-    } @else if (groups().length === 0) {
+    } @else if (sections().length === 0) {
       <div class="empty-state" role="status">
         <h2 class="section-title">
-          {{ searched() ? 'Sin resultados' : filtering() ? 'Nada coincide' : 'Cartelera vacía' }}
+          {{ searched() ? 'Sin resultados' : narrowed() || format() !== 'all' ? 'Nada coincide' : 'Cartelera vacía' }}
         </h2>
         <p class="muted">
           {{
             searched()
               ? 'Prueba con otro nombre.'
-              : filtering()
+              : narrowed() || format() !== 'all'
                 ? 'Quita un filtro para ver más títulos.'
-                : 'Cuando guardes una búsqueda, el título aparece aquí.'
+                : 'Cuando TMDB responda, la cartelera se ordena sola.'
           }}
         </p>
       </div>
     } @else {
-      @for (group of groups(); track group.id) {
+      @for (group of sections(); track group.id) {
         <section class="catalog-group" [attr.aria-label]="group.label">
           <h2 class="section-title">{{ group.label }}</h2>
+          @if (group.hint) {
+            <p class="muted">{{ group.hint }}</p>
+          }
           <div class="catalog-grid">
             @for (title of group.titles; track title.id) {
               <a class="title-card" [routerLink]="['/tabs/title', title.id]">

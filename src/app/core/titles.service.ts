@@ -10,11 +10,27 @@ import { isTmdbConfigured, supabase } from './supabase';
 import { normalizeText } from './text';
 import { clampScore, clipText, isUuid, validateSearch, validateYear } from './validation';
 
+const BOARD_TTL_MS = 5 * 60 * 1000;
 const NETWORK_ERROR = 'No hay conexión con el servidor. Revisa tu internet e inténtalo de nuevo.';
 
 const IMAGE_BASE = 'https://image.tmdb.org/t/p/w500';
 const SEARCH_LIMIT = 8;
 const TMDB_LANGUAGE = 'es-MX';
+
+interface FeedItem {
+  id: number;
+  mediaType: MediaType;
+  date: string | null;
+  vote: number | null;
+  rank: number;
+}
+
+export interface CatalogBoard {
+  id: string;
+  label: string;
+  hint: string;
+  titles: Title[];
+}
 
 interface TmdbListItem {
   id?: number;
@@ -129,6 +145,143 @@ export class TitlesService {
       };
     }
     return { ok: true, titles };
+  }
+
+  async loadBoards(): Promise<ActionResult<{ boards: CatalogBoard[] }>> {
+    if (!isTmdbConfigured) {
+      return {
+        ok: false,
+        error: 'Falta TMDB_API_KEY en .env. Guárdala y vuelve a iniciar la app.',
+      };
+    }
+    const cached = this.boardsCache;
+    if (cached && Date.now() - cached.at < BOARD_TTL_MS) {
+      return { ok: true, boards: cached.boards };
+    }
+    if (!this.boardTask) {
+      this.boardTask = this.fetchBoards().finally(() => {
+        this.boardTask = null;
+      });
+    }
+    return this.boardTask;
+  }
+
+  private boardTask: Promise<ActionResult<{ boards: CatalogBoard[] }>> | null = null;
+  private boardsCache: { at: number; boards: CatalogBoard[] } | null = null;
+
+  private async fetchBoards(): Promise<ActionResult<{ boards: CatalogBoard[] }>> {
+    try {
+      const today = todayStamp();
+      const [trending, upcoming, playing, airing, movieRated, tvRated] = await Promise.all([
+        this.listFeed('trending/all/day', null),
+        this.listFeed('movie/upcoming', 'movie'),
+        this.listFeed('movie/now_playing', 'movie'),
+        this.listFeed('tv/on_the_air', 'tv'),
+        this.listFeed('movie/top_rated', 'movie'),
+        this.listFeed('tv/top_rated', 'tv'),
+      ]);
+      const picked = [
+        { id: 'trending', label: 'Tendencias', hint: 'Lo más visto ahora.', items: take(trending, 8) },
+        {
+          id: 'upcoming',
+          label: 'Próximos estrenos',
+          hint: 'Lo que está por salir.',
+          items: take(
+            upcoming
+              .filter((item) => item.date !== null && item.date >= today)
+              .sort((a, b) => (a.date ?? '').localeCompare(b.date ?? '')),
+            8,
+          ),
+        },
+        {
+          id: 'recent',
+          label: 'Recién estrenados',
+          hint: 'Lo que acaba de llegar.',
+          items: take(
+            [...playing, ...airing]
+              .filter((item) => item.date !== null && item.date <= today)
+              .sort((a, b) => (b.date ?? '').localeCompare(a.date ?? '')),
+            8,
+          ),
+        },
+        {
+          id: 'rated',
+          label: 'Mejor valorados',
+          hint: 'Las notas más altas.',
+          items: take(
+            [...movieRated, ...tvRated].sort((a, b) => (b.vote ?? 0) - (a.vote ?? 0)),
+            8,
+          ),
+        },
+      ];
+      const seen = new Set<string>();
+      const selected = picked.map((board) => ({
+        ...board,
+        items: board.items.filter((item) => {
+          const key = `${item.mediaType}:${item.id}`;
+          if (seen.has(key)) {
+            return false;
+          }
+          seen.add(key);
+          return true;
+        }),
+      }));
+      const stored = await pool(
+        selected.flatMap((board) => board.items),
+        3,
+        async (item) => {
+          try {
+            return await this.ensureStored(item.id, item.mediaType);
+          } catch {
+            return null;
+          }
+        },
+      );
+      const byKey = new Map(
+        stored.flatMap((title) => (title ? [[`${title.mediaType}:${title.tmdbId}`, title] as const] : [])),
+      );
+      const boards = selected
+        .map((board) => ({
+          id: board.id,
+          label: board.label,
+          hint: board.hint,
+          titles: board.items.flatMap((item) => byKey.get(`${item.mediaType}:${item.id}`) ?? []),
+        }))
+        .filter((board) => board.titles.length > 0);
+      if (boards.length === 0) {
+        return { ok: false, error: 'TMDB respondió, pero no se pudo armar la cartelera.' };
+      }
+      this.boardsCache = { at: Date.now(), boards };
+      return { ok: true, boards };
+    } catch (error) {
+      return { ok: false, error: messageFrom(error) };
+    }
+  }
+
+  private async listFeed(path: string, fallback: MediaType | null): Promise<FeedItem[]> {
+    const url = new URL(`https://api.themoviedb.org/3/${path}`);
+    url.searchParams.set('api_key', environment.tmdbApiKey);
+    url.searchParams.set('language', TMDB_LANGUAGE);
+    const response = await tmdbFetch(url);
+    if (!response.ok) {
+      throw new Error(`TMDB ${response.status}`);
+    }
+    const body = (await response.json()) as { results?: Record<string, unknown>[] };
+    return (body.results ?? []).flatMap((item, index) => {
+      const id = item['id'];
+      if (typeof id !== 'number' || id <= 0) {
+        return [];
+      }
+      const rawType = item['media_type'];
+      const mediaType =
+        fallback ?? (rawType === 'tv' ? 'tv' : rawType === 'movie' ? 'movie' : null);
+      if (!mediaType) {
+        return [];
+      }
+      const date = text(item['release_date']) || text(item['first_air_date']);
+      const vote = typeof item['vote_average'] === 'number' ? item['vote_average'] : null;
+      return [{ id, mediaType, date: /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : null, vote, rank: index }];
+    });
   }
 
   async storePopular(): Promise<ActionResult<{ titles: Title[] }>> {
@@ -329,6 +482,17 @@ function messageFrom(error: unknown): string {
 
 const TMDB_TIMEOUT_MS = 8000;
 const PROGRAM_TYPES = new Set(['reality', 'talk show', 'news', 'documentary', 'video']);
+
+function todayStamp(): string {
+  const now = new Date();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return `${now.getFullYear()}-${month}-${day}`;
+}
+
+function take(items: FeedItem[], limit: number): FeedItem[] {
+  return items.slice(0, limit);
+}
 
 async function tmdbFetch(url: URL): Promise<Response> {
   try {

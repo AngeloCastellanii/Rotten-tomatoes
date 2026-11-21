@@ -20,7 +20,7 @@ import {
 import { hideBrokenImage, scoreLabel, showFormat, showFormatLabel, yearLabel } from '../../core/display';
 import { CATALOG_GENRES } from '../../core/genres';
 import type { CatalogSort, GenreId, Title, UserRole } from '../../core/models';
-import { TitlesService } from '../../core/titles.service';
+import { TitlesService, type CatalogBoard } from '../../core/titles.service';
 import { asGenre, clampScore, parseYearInput } from '../../core/validation';
 import { LIMITS } from '../../core/limits';
 
@@ -52,6 +52,7 @@ export class CatalogPage {
 
   readonly genres = CATALOG_GENRES;
   readonly titles = signal<Title[]>([]);
+  readonly boards = signal<CatalogBoard[]>([]);
   readonly error = signal('');
   readonly busy = signal(false);
   readonly loading = signal(false);
@@ -63,14 +64,22 @@ export class CatalogPage {
   readonly scoreKind = signal<UserRole>('audience');
   readonly format = signal<'all' | 'movie' | 'series' | 'program'>('all');
   readonly searched = signal(false);
-  readonly filtering = computed(
+  readonly narrowed = computed(
     () =>
       this.query().trim() !== '' ||
       this.genre() !== '' ||
       this.year().trim() !== '' ||
-      this.minScore() > 0 ||
-      this.format() !== 'all',
+      this.minScore() > 0,
   );
+  readonly homeBoards = computed(() => {
+    const format = this.format();
+    return this.boards()
+      .map((board) => ({
+        ...board,
+        titles: board.titles.filter((title) => format === 'all' || showFormat(title) === format),
+      }))
+      .filter((board) => board.titles.length > 0);
+  });
   readonly groups = computed(() => {
     const format = this.format();
     const sections = [
@@ -85,6 +94,12 @@ export class CatalogPage {
         titles: this.titles().filter((title) => showFormat(title) === section.id),
       }))
       .filter((section) => section.titles.length > 0);
+  });
+  readonly sections = computed(() => {
+    if (!this.narrowed() && !this.searched()) {
+      return this.homeBoards();
+    }
+    return this.groups().map((group) => ({ ...group, hint: '' }));
   });
 
   readonly limits = LIMITS;
@@ -202,6 +217,21 @@ export class CatalogPage {
 
     const gen = ++this.loadGen;
     this.loading.set(true);
+    if (!this.narrowed() && !this.searched()) {
+      const boards = await this.titlesApi.loadBoards();
+      if (gen !== this.loadGen) {
+        return;
+      }
+      if (boards.ok && boards.boards.length > 0) {
+        this.loading.set(false);
+        this.error.set('');
+        this.boards.set(boards.boards);
+        return;
+      }
+      if (!boards.ok) {
+        this.error.set(boards.error);
+      }
+    }
     const result = await this.titlesApi.listCatalog({
       name: this.query(),
       genre: this.genre(),
@@ -219,40 +249,10 @@ export class CatalogPage {
       this.focusError();
       return;
     }
-    if (result.titles.length === 0 && !this.filtering() && !this.searched()) {
-      const seeded = await this.titlesApi.storePopular();
-      if (gen !== this.loadGen) {
-        return;
-      }
-      if (!seeded.ok) {
-        this.loading.set(false);
-        this.error.set(seeded.error);
-        this.focusError();
-        return;
-      }
-      const again = await this.titlesApi.listCatalog({
-        name: this.query(),
-        genre: this.genre(),
-        year: parsedYear.state === 'ok' ? parsedYear.year : null,
-        minScore: this.minScore(),
-        sort: this.sort(),
-        scoreKind: this.scoreKind(),
-      });
-      if (gen !== this.loadGen) {
-        return;
-      }
-      this.loading.set(false);
-      if (!again.ok) {
-        this.error.set(again.error);
-        this.focusError();
-        return;
-      }
-      this.error.set('');
-      this.titles.set(again.titles);
-      return;
-    }
     this.loading.set(false);
-    this.error.set('');
+    if (!this.error()) {
+      this.error.set('');
+    }
     this.titles.set(result.titles);
   }
 
@@ -260,3 +260,4 @@ export class CatalogPage {
     setTimeout(() => document.getElementById('form-error')?.focus());
   }
 }
+
