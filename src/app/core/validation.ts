@@ -88,6 +88,15 @@ export function validateYear(value: number): ValidationResult {
   return { ok: true };
 }
 
+export function yearOptions(now = new Date().getFullYear()): number[] {
+  const newest = Math.min(LIMITS.year.max, now + 1);
+  const years: number[] = [];
+  for (let year = newest; year >= LIMITS.year.min; year -= 1) {
+    years.push(year);
+  }
+  return years;
+}
+
 export type YearInput =
   | { state: 'empty' }
   | { state: 'pending' }

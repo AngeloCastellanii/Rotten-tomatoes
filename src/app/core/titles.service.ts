@@ -14,15 +14,33 @@ const BOARD_TTL_MS = 5 * 60 * 1000;
 const NETWORK_ERROR = 'No hay conexión con el servidor. Revisa tu internet e inténtalo de nuevo.';
 
 const IMAGE_BASE = 'https://image.tmdb.org/t/p/w500';
-const SEARCH_LIMIT = 8;
+const SEARCH_LIMIT = 20;
 const TMDB_LANGUAGE = 'es-MX';
 
-interface FeedItem {
+interface ListedTitle {
   id: number;
   mediaType: MediaType;
+  name: string;
+  overview: string;
   date: string | null;
+  posterPath: string | null;
+  backdropPath: string | null;
+  genreIds: number[];
   vote: number | null;
+  originalLanguage: string | null;
+  popularity: number;
   rank: number;
+}
+
+export interface SearchHit {
+  tmdbId: number;
+  mediaType: MediaType;
+  name: string;
+  overview: string;
+  releaseDate: string | null;
+  posterUrl: string | null;
+  genres: string[];
+  tmdbScore: number | null;
 }
 
 export interface CatalogBoard {
@@ -30,11 +48,6 @@ export interface CatalogBoard {
   label: string;
   hint: string;
   titles: Title[];
-}
-
-interface TmdbListItem {
-  id?: number;
-  media_type?: string;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -113,38 +126,99 @@ export class TitlesService {
       };
     }
 
-    let results: TmdbListItem[];
+    let results: ListedTitle[];
     try {
       results = await this.searchTmdb(query);
     } catch (error) {
       return { ok: false, error: messageFrom(error) };
     }
-
-    const jobs: { id: number; mediaType: MediaType }[] = results.flatMap((item) => {
-      if (typeof item.id !== 'number' || item.id <= 0) {
-        return [];
-      }
-      const mediaType: MediaType | null =
-        item.media_type === 'tv' ? 'tv' : item.media_type === 'movie' ? 'movie' : null;
-      return mediaType ? [{ id: item.id, mediaType }] : [];
-    });
-    let lastError: unknown = null;
-    const stored = await pool(jobs, 3, async (job) => {
-      try {
-        return await this.ensureStored(job.id, job.mediaType);
-      } catch (error) {
-        lastError = error;
-        return null;
-      }
-    });
-    const titles = stored.flatMap((title) => title ?? []);
+    const titles = await this.storeListed(results);
     if (titles.length === 0) {
-      return {
-        ok: false,
-        error: lastError ? messageFrom(lastError) : 'TMDB no encontró títulos para guardar.',
-      };
+      return { ok: false, error: 'TMDB no encontró títulos para guardar.' };
     }
     return { ok: true, titles };
+  }
+
+  async searchLive(rawQuery: string): Promise<ActionResult<{ hits: SearchHit[] }>> {
+    const query = normalizeText(rawQuery);
+    const check = validateSearch(query);
+    if (!check.ok) {
+      return { ok: false, error: check.error ?? 'Búsqueda inválida.' };
+    }
+    if (!isTmdbConfigured) {
+      return {
+        ok: false,
+        error: 'Falta TMDB_API_KEY en .env. Guárdala y vuelve a iniciar la app.',
+      };
+    }
+    try {
+      const hits = (await this.searchTmdb(query)).map((item) => this.toHit(item));
+      if (hits.length === 0) {
+        return { ok: false, error: 'TMDB no encontró títulos.' };
+      }
+      return { ok: true, hits };
+    } catch (error) {
+      return { ok: false, error: messageFrom(error) };
+    }
+  }
+
+  async storeHit(hit: SearchHit): Promise<ActionResult<{ title: Title }>> {
+    const title = await this.ensureHit(hit);
+    if (!title) {
+      return { ok: false, error: 'No se pudo guardar el título.' };
+    }
+    return { ok: true, title };
+  }
+
+  async storeHits(hits: SearchHit[]): Promise<ActionResult<{ titles: Title[] }>> {
+    const stored = await pool(hits, 8, (hit) => this.ensureHit(hit));
+    const titles = stored.flatMap((title) => title ?? []);
+    if (titles.length === 0) {
+      return { ok: false, error: 'No se pudo guardar.' };
+    }
+    return { ok: true, titles };
+  }
+
+  async discoverYear(year: number): Promise<ActionResult<{ titles: Title[] }>> {
+    const check = validateYear(year);
+    if (!check.ok) {
+      return { ok: false, error: check.error ?? 'Año inválido.' };
+    }
+    if (!isTmdbConfigured) {
+      return {
+        ok: false,
+        error: 'Falta TMDB_API_KEY en .env. Guárdala y vuelve a iniciar la app.',
+      };
+    }
+    try {
+      const pages = ['1', '2', '3'];
+      const lists = await Promise.all([
+        ...pages.map((page) =>
+          this.listFeed('discover/movie', 'movie', {
+            primary_release_year: String(year),
+            sort_by: 'popularity.desc',
+            include_adult: 'false',
+            page,
+          }),
+        ),
+        ...pages.map((page) =>
+          this.listFeed('discover/tv', 'tv', {
+            first_air_date_year: String(year),
+            sort_by: 'popularity.desc',
+            include_adult: 'false',
+            page,
+          }),
+        ),
+      ]);
+      const ranked = lists.flat().sort((a, b) => b.popularity - a.popularity);
+      const titles = await this.storeListed(ranked);
+      if (titles.length === 0) {
+        return { ok: false, error: 'TMDB no tiene estrenos populares de ese año.' };
+      }
+      return { ok: true, titles };
+    } catch (error) {
+      return { ok: false, error: messageFrom(error) };
+    }
   }
 
   async loadBoards(): Promise<ActionResult<{ boards: CatalogBoard[] }>> {
@@ -181,7 +255,7 @@ export class TitlesService {
         this.listFeed('tv/top_rated', 'tv'),
       ]);
       const picked = [
-        { id: 'trending', label: 'Tendencias', hint: 'Lo más visto ahora.', items: take(trending, 8) },
+        { id: 'trending', label: 'Tendencias', hint: 'Lo más visto ahora.', items: take(trending, 20) },
         {
           id: 'upcoming',
           label: 'Próximos estrenos',
@@ -190,7 +264,7 @@ export class TitlesService {
             upcoming
               .filter((item) => item.date !== null && item.date >= today)
               .sort((a, b) => (a.date ?? '').localeCompare(b.date ?? '')),
-            8,
+            20,
           ),
         },
         {
@@ -201,7 +275,7 @@ export class TitlesService {
             [...playing, ...airing]
               .filter((item) => item.date !== null && item.date <= today)
               .sort((a, b) => (b.date ?? '').localeCompare(a.date ?? '')),
-            8,
+            20,
           ),
         },
         {
@@ -210,7 +284,7 @@ export class TitlesService {
           hint: 'Las notas más altas.',
           items: take(
             [...movieRated, ...tvRated].sort((a, b) => (b.vote ?? 0) - (a.vote ?? 0)),
-            8,
+            20,
           ),
         },
       ];
@@ -226,20 +300,8 @@ export class TitlesService {
           return true;
         }),
       }));
-      const stored = await pool(
-        selected.flatMap((board) => board.items),
-        3,
-        async (item) => {
-          try {
-            return await this.ensureStored(item.id, item.mediaType);
-          } catch {
-            return null;
-          }
-        },
-      );
-      const byKey = new Map(
-        stored.flatMap((title) => (title ? [[`${title.mediaType}:${title.tmdbId}`, title] as const] : [])),
-      );
+      const stored = await this.storeListed(selected.flatMap((board) => board.items));
+      const byKey = new Map(stored.map((title) => [`${title.mediaType}:${title.tmdbId}`, title] as const));
       const boards = selected
         .map((board) => ({
           id: board.id,
@@ -258,30 +320,23 @@ export class TitlesService {
     }
   }
 
-  private async listFeed(path: string, fallback: MediaType | null): Promise<FeedItem[]> {
+  private async listFeed(
+    path: string,
+    fallback: MediaType | null,
+    extra: Record<string, string> = {},
+  ): Promise<ListedTitle[]> {
     const url = new URL(`https://api.themoviedb.org/3/${path}`);
     url.searchParams.set('api_key', environment.tmdbApiKey);
     url.searchParams.set('language', TMDB_LANGUAGE);
+    for (const [key, value] of Object.entries(extra)) {
+      url.searchParams.set(key, value);
+    }
     const response = await tmdbFetch(url);
     if (!response.ok) {
       throw new Error(`TMDB ${response.status}`);
     }
     const body = (await response.json()) as { results?: Record<string, unknown>[] };
-    return (body.results ?? []).flatMap((item, index) => {
-      const id = item['id'];
-      if (typeof id !== 'number' || id <= 0) {
-        return [];
-      }
-      const rawType = item['media_type'];
-      const mediaType =
-        fallback ?? (rawType === 'tv' ? 'tv' : rawType === 'movie' ? 'movie' : null);
-      if (!mediaType) {
-        return [];
-      }
-      const date = text(item['release_date']) || text(item['first_air_date']);
-      const vote = typeof item['vote_average'] === 'number' ? item['vote_average'] : null;
-      return [{ id, mediaType, date: /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : null, vote, rank: index }];
-    });
+    return (body.results ?? []).flatMap((item, index) => listedFromRow(item, index, fallback) ?? []);
   }
 
   async storePopular(): Promise<ActionResult<{ titles: Title[] }>> {
@@ -337,20 +392,95 @@ export class TitlesService {
       .map((id) => ({ id, mediaType }));
   }
 
-  private async searchTmdb(query: string): Promise<TmdbListItem[]> {
-    const url = new URL('https://api.themoviedb.org/3/search/multi');
-    url.searchParams.set('api_key', environment.tmdbApiKey);
-    url.searchParams.set('language', TMDB_LANGUAGE);
-    url.searchParams.set('include_adult', 'false');
-    url.searchParams.set('query', query);
-    const response = await tmdbFetch(url);
-    if (!response.ok) {
-      throw new Error(`TMDB ${response.status}`);
+  private toHit(item: ListedTitle): SearchHit {
+    return {
+      tmdbId: item.id,
+      mediaType: item.mediaType,
+      name: item.name || 'Sin título',
+      overview: item.overview,
+      releaseDate: item.date,
+      posterUrl: imageUrl(item.posterPath),
+      genres: genreNamesFromIds(item.genreIds),
+      tmdbScore: roundScore(item.vote),
+    };
+  }
+
+  private async ensureHit(hit: SearchHit): Promise<Title | null> {
+    const existing = await this.findStored(hit.tmdbId, hit.mediaType);
+    if (existing) {
+      return existing;
     }
-    const body = (await response.json()) as { results?: TmdbListItem[] };
-    return (body.results ?? [])
-      .filter((item) => item.media_type === 'movie' || item.media_type === 'tv')
-      .slice(0, SEARCH_LIMIT);
+    const row = {
+      tmdb_id: hit.tmdbId,
+      media_type: hit.mediaType,
+      name: clipText(hit.name || 'Sin título', LIMITS.titleName.max) || 'Sin título',
+      overview: clipText(hit.overview, LIMITS.overview.max),
+      release_date: hit.releaseDate,
+      poster_url: hit.posterUrl,
+      backdrop_url: null,
+      genres: hit.genres,
+      cast: [],
+      runtime_minutes: null,
+      original_language: null,
+      tmdb_score: roundScore(hit.tmdbScore),
+    };
+    const { data, error } = await supabase.from('titles').insert(row).select('*').single();
+    if (!error && data) {
+      return mapTitle(data);
+    }
+    return this.findStored(hit.tmdbId, hit.mediaType);
+  }
+
+  private async searchTmdb(query: string): Promise<ListedTitle[]> {
+    const results = await this.listFeed('search/multi', null, {
+      include_adult: 'false',
+      query,
+    });
+    return results.slice(0, SEARCH_LIMIT);
+  }
+
+  private async storeListed(items: ListedTitle[]): Promise<Title[]> {
+    const unique: ListedTitle[] = [];
+    const seen = new Set<string>();
+    for (const item of items) {
+      const key = `${item.mediaType}:${item.id}`;
+      if (seen.has(key)) {
+        continue;
+      }
+      seen.add(key);
+      unique.push(item);
+    }
+    const stored = await pool(unique, 8, (item) => this.ensureListed(item));
+    const byKey = new Map(
+      stored.flatMap((title) => (title ? [[`${title.mediaType}:${title.tmdbId}`, title] as const] : [])),
+    );
+    return unique.flatMap((item) => byKey.get(`${item.mediaType}:${item.id}`) ?? []);
+  }
+
+  private async ensureListed(item: ListedTitle): Promise<Title | null> {
+    const existing = await this.findStored(item.id, item.mediaType);
+    if (existing) {
+      return existing;
+    }
+    const row = {
+      tmdb_id: item.id,
+      media_type: item.mediaType,
+      name: clipText(item.name || 'Sin título', LIMITS.titleName.max) || 'Sin título',
+      overview: clipText(item.overview, LIMITS.overview.max),
+      release_date: item.date,
+      poster_url: imageUrl(item.posterPath),
+      backdrop_url: imageUrl(item.backdropPath),
+      genres: genreNamesFromIds(item.genreIds),
+      cast: [],
+      runtime_minutes: null,
+      original_language: item.originalLanguage,
+      tmdb_score: roundScore(item.vote),
+    };
+    const { data, error } = await supabase.from('titles').insert(row).select('*').single();
+    if (!error && data) {
+      return mapTitle(data);
+    }
+    return this.findStored(item.id, item.mediaType);
   }
 
   private async ensureStored(tmdbId: number, mediaType: MediaType): Promise<Title | null> {
@@ -490,7 +620,7 @@ function todayStamp(): string {
   return `${now.getFullYear()}-${month}-${day}`;
 }
 
-function take(items: FeedItem[], limit: number): FeedItem[] {
+function take(items: ListedTitle[], limit: number): ListedTitle[] {
   return items.slice(0, limit);
 }
 
@@ -530,6 +660,74 @@ function genreList(mediaType: MediaType, detail: Record<string, unknown>): strin
     return names;
   }
   return [...names, 'Programa'];
+}
+
+function listedFromRow(
+  item: Record<string, unknown>,
+  index: number,
+  fallback: MediaType | null,
+): ListedTitle | null {
+  const id = item['id'];
+  if (typeof id !== 'number' || id <= 0) {
+    return null;
+  }
+  const rawType = item['media_type'];
+  const mediaType = fallback ?? (rawType === 'tv' ? 'tv' : rawType === 'movie' ? 'movie' : null);
+  if (!mediaType) {
+    return null;
+  }
+  const date = text(item['release_date']) || text(item['first_air_date']);
+  const genreIds = Array.isArray(item['genre_ids'])
+    ? item['genre_ids'].filter((value): value is number => typeof value === 'number')
+    : [];
+  return {
+    id,
+    mediaType,
+    name: text(item['title']) || text(item['name']),
+    overview: text(item['overview']),
+    date: /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : null,
+    posterPath: text(item['poster_path']) || null,
+    backdropPath: text(item['backdrop_path']) || null,
+    genreIds,
+    vote: typeof item['vote_average'] === 'number' ? item['vote_average'] : null,
+    originalLanguage: text(item['original_language']) || null,
+    popularity: typeof item['popularity'] === 'number' ? item['popularity'] : 0,
+    rank: index,
+  };
+}
+
+const GENRE_NAMES: Record<number, string> = {
+  28: 'Acción',
+  12: 'Aventura',
+  16: 'Animación',
+  35: 'Comedia',
+  80: 'Crimen',
+  99: 'Documental',
+  18: 'Drama',
+  10751: 'Familia',
+  14: 'Fantasía',
+  36: 'Historia',
+  27: 'Terror',
+  10402: 'Música',
+  9648: 'Misterio',
+  10749: 'Romance',
+  878: 'Ciencia ficción',
+  10770: 'Película de TV',
+  53: 'Suspense',
+  10752: 'Bélica',
+  37: 'Western',
+  10759: 'Acción y aventura',
+  10762: 'Infantil',
+  10763: 'Noticias',
+  10764: 'Reality',
+  10765: 'Ciencia ficción y fantasía',
+  10766: 'Telenovela',
+  10767: 'Talk show',
+  10768: 'Guerra y política',
+};
+
+function genreNamesFromIds(ids: number[]): string[] {
+  return ids.flatMap((id) => GENRE_NAMES[id] ?? []);
 }
 
 function text(value: unknown): string {

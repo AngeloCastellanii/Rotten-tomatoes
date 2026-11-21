@@ -9,7 +9,7 @@
 
 <ion-content>
   <div class="page">
-    <form class="stack" (submit)="search($event)">
+    <form class="stack" (submit)="save($event)">
       <ion-searchbar
         aria-label="Nombre de la película, serie o programa"
         [value]="query()"
@@ -17,10 +17,15 @@
         [attr.maxlength]="limits.search.max"
         [debounce]="0"
         (ionInput)="onQuery($event)"
-        (keyup.enter)="search()"
       ></ion-searchbar>
-      <ion-button expand="block" type="submit" [disabled]="busy()">
-        {{ busy() ? 'Buscando…' : 'Buscar y guardar' }}
+      @if (loading() && query().trim().length >= limits.search.min) {
+        <p class="muted" role="status">Buscando resultados…</p>
+      }
+      @if (notice()) {
+        <p class="form-success" role="status">{{ notice() }}</p>
+      }
+      <ion-button expand="block" type="submit" [disabled]="busy() || visibleHits().length === 0">
+        {{ busy() ? 'Guardando…' : 'Guardar' }}
       </ion-button>
     </form>
 
@@ -40,16 +45,20 @@
         }
       </ion-select>
 
-      <ion-input
+      <ion-select
         label="Año de estreno"
         labelPlacement="stacked"
-        type="text"
-        inputmode="numeric"
-        [maxlength]="4"
+        interface="modal"
         fill="outline"
+        placeholder="Elige un año"
         [value]="year()"
-        (ionInput)="onYear($event)"
-      ></ion-input>
+        (ionChange)="onYear($event)"
+      >
+        <ion-select-option value="">Todos</ion-select-option>
+        @for (item of years; track item) {
+          <ion-select-option [value]="'' + item">{{ item }}</ion-select-option>
+        }
+      </ion-select>
 
       <div>
         <ion-range
@@ -99,8 +108,8 @@
       </ion-segment>
 
       <p class="muted">
-        Sin filtros, el orden sale de TMDB: tendencias, próximos, estrenos y mejor valorados. Con
-        filtros, manda el puntaje de las reseñas o la fecha.
+        Sin filtros, el orden sale de TMDB: tendencias, próximos, estrenos y mejor valorados. Al
+        elegir un año, TMDB trae los estrenos más populares de ese año.
       </p>
     </section>
 
@@ -117,11 +126,11 @@
     } @else if (sections().length === 0) {
       <div class="empty-state" role="status">
         <h2 class="section-title">
-          {{ searched() ? 'Sin resultados' : narrowed() || format() !== 'all' ? 'Nada coincide' : 'Cartelera vacía' }}
+          {{ query().trim().length >= limits.search.min ? 'Sin resultados' : narrowed() || format() !== 'all' ? 'Nada coincide' : 'Cartelera vacía' }}
         </h2>
         <p class="muted">
           {{
-            searched()
+            query().trim().length >= limits.search.min
               ? 'Prueba con otro nombre.'
               : narrowed() || format() !== 'all'
                 ? 'Quita un filtro para ver más títulos.'
@@ -137,30 +146,35 @@
             <p class="muted">{{ group.hint }}</p>
           }
           <div class="catalog-grid">
-            @for (title of group.titles; track title.id) {
-              <a class="title-card" [routerLink]="['/tabs/title', title.id]">
+            @for (card of group.cards; track card.key) {
+              <a
+                class="title-card"
+                [routerLink]="card.id ? ['/tabs/title', card.id] : null"
+                [attr.href]="card.id ? null : '#'"
+                (click)="openCard($event, card)"
+              >
                 <div class="poster-frame poster-frame-cover">
-                  @if (title.posterUrl) {
-                    <img [src]="title.posterUrl" [alt]="'Carátula de ' + title.name" (error)="hideBroken($event)" />
+                  @if (card.posterUrl) {
+                    <img [src]="card.posterUrl" [alt]="'Carátula de ' + card.name" (error)="hideBroken($event)" />
                   }
-                  <span class="poster-fallback">{{ kind(title) }}</span>
+                  <span class="poster-fallback">{{ kind(card) }}</span>
                 </div>
                 <div class="card-body">
-                  <h2>{{ title.name }}</h2>
-                  <p class="muted">{{ kind(title) }} · {{ yearText(title.releaseDate) }}</p>
-                  @if (title.genres.length) {
+                  <h2>{{ card.name }}</h2>
+                  <p class="muted">{{ kind(card) }} · {{ yearText(card.releaseDate) }}</p>
+                  @if (card.genres.length) {
                     <ul class="genre-line">
-                      @for (genre of title.genres; track genre) {
+                      @for (genre of card.genres; track genre) {
                         <li class="genre-chip">{{ genre }}</li>
                       }
                     </ul>
                   }
-                  @if (title.overview) {
-                    <p class="copy">{{ title.overview }}</p>
+                  @if (card.overview) {
+                    <p class="copy">{{ card.overview }}</p>
                   }
                   <p class="score-line">
-                    <span class="score-pill score-pill-audience">Público {{ scoreText(title.audienceScore) }}</span>
-                    <span class="score-pill score-pill-critic">Críticos {{ scoreText(title.criticScore) }}</span>
+                    <span class="score-pill score-pill-audience">Público {{ scoreText(card.audienceScore) }}</span>
+                    <span class="score-pill score-pill-critic">Críticos {{ scoreText(card.criticScore) }}</span>
                   </p>
                 </div>
               </a>

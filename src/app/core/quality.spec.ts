@@ -15,6 +15,7 @@ import {
   validateReviewBody,
   validateReviewScore,
   validateSearch,
+  yearOptions,
 } from './validation';
 
 const TITLE_ID = '11111111-1111-4111-8111-111111111111';
@@ -64,6 +65,9 @@ describe('parametros de entrada', () => {
     expect(parseYearInput('20.2').state).toBe('invalid');
     expect(parseYearInput('1492').state).toBe('invalid');
     expect(parseYearInput('1999')).toEqual({ state: 'ok', year: 1999 });
+    expect(yearOptions(2026)[0]).toBe(2027);
+    expect(yearOptions(2026)).toContain(1999);
+    expect(yearOptions(2026)).not.toContain(1492);
 
     expect(clampScore(Number.NaN)).toBe(0);
     expect(clampScore(-4)).toBe(0);

@@ -1,11 +1,10 @@
 import { Component, computed, inject, signal } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import {
   IonButton,
   IonButtons,
   IonContent,
   IonHeader,
-  IonInput,
   IonLabel,
   IonRange,
   IonSearchbar,
@@ -18,11 +17,26 @@ import {
 } from '@ionic/angular';
 
 import { hideBrokenImage, scoreLabel, showFormat, showFormatLabel, yearLabel } from '../../core/display';
-import { CATALOG_GENRES } from '../../core/genres';
-import type { CatalogSort, GenreId, Title, UserRole } from '../../core/models';
-import { TitlesService, type CatalogBoard } from '../../core/titles.service';
-import { asGenre, clampScore, parseYearInput } from '../../core/validation';
+import { CATALOG_GENRES, matchesGenre } from '../../core/genres';
+import type { CatalogSort, GenreId, MediaType, Title, UserRole } from '../../core/models';
+import { normalizeKey } from '../../core/text';
+import { TitlesService, type CatalogBoard, type SearchHit } from '../../core/titles.service';
+import { asGenre, clampScore, parseYearInput, yearOptions } from '../../core/validation';
 import { LIMITS } from '../../core/limits';
+
+interface CatalogCard {
+  key: string;
+  id: string | null;
+  tmdbId: number;
+  mediaType: MediaType;
+  name: string;
+  overview: string;
+  releaseDate: string | null;
+  posterUrl: string | null;
+  genres: string[];
+  audienceScore: number | null;
+  criticScore: number | null;
+}
 
 @Component({
   selector: 'app-catalog',
@@ -38,7 +52,6 @@ import { LIMITS } from '../../core/limits';
     IonButtons,
     IonSelect,
     IonSelectOption,
-    IonInput,
     IonRange,
     IonSegment,
     IonSegmentButton,
@@ -47,13 +60,18 @@ import { LIMITS } from '../../core/limits';
 })
 export class CatalogPage {
   private readonly titlesApi = inject(TitlesService);
+  private readonly router = inject(Router);
   private loadGen = 0;
   private nameTimer: ReturnType<typeof setTimeout> | null = null;
 
+  readonly years = yearOptions();
   readonly genres = CATALOG_GENRES;
   readonly titles = signal<Title[]>([]);
+  readonly hits = signal<SearchHit[]>([]);
+  readonly savedIds = signal<Record<string, string>>({});
   readonly boards = signal<CatalogBoard[]>([]);
   readonly error = signal('');
+  readonly notice = signal('');
   readonly busy = signal(false);
   readonly loading = signal(false);
   readonly query = signal('');
@@ -66,7 +84,7 @@ export class CatalogPage {
   readonly searched = signal(false);
   readonly narrowed = computed(
     () =>
-      this.query().trim() !== '' ||
+      this.query().trim().length >= LIMITS.search.min ||
       this.genre() !== '' ||
       this.year().trim() !== '' ||
       this.minScore() > 0,
@@ -80,26 +98,50 @@ export class CatalogPage {
       }))
       .filter((board) => board.titles.length > 0);
   });
-  readonly groups = computed(() => {
+  readonly visibleHits = computed(() => {
+    const year = this.year().trim();
+    const genre = this.genre();
+    const minScore = this.minScore();
+    return this.hits().filter((hit) => {
+      if (year && !(hit.releaseDate ?? '').startsWith(year)) {
+        return false;
+      }
+      if (genre && !matchesGenre(hit.genres, genre)) {
+        return false;
+      }
+      if (minScore > 0 && (hit.tmdbScore ?? -1) * 10 < minScore) {
+        return false;
+      }
+      return true;
+    });
+  });
+  readonly sections = computed(() => {
     const format = this.format();
-    const sections = [
+    const kinds = [
       { id: 'movie' as const, label: 'Películas' },
       { id: 'series' as const, label: 'Series' },
       { id: 'program' as const, label: 'Programas de televisión' },
     ];
-    return sections
-      .filter((section) => format === 'all' || format === section.id)
-      .map((section) => ({
-        ...section,
-        titles: this.titles().filter((title) => showFormat(title) === section.id),
-      }))
-      .filter((section) => section.titles.length > 0);
-  });
-  readonly sections = computed(() => {
-    if (!this.narrowed() && !this.searched()) {
-      return this.homeBoards();
+    if (this.query().trim().length >= LIMITS.search.min) {
+      return this.pack(
+        kinds,
+        this.visibleHits().map((hit) => this.cardFromHit(hit)),
+        format,
+      );
     }
-    return this.groups().map((group) => ({ ...group, hint: '' }));
+    if (!this.narrowed() && !this.searched()) {
+      return this.homeBoards().map((board) => ({
+        id: board.id,
+        label: board.label,
+        hint: board.hint,
+        cards: board.titles.map((title) => this.cardFromTitle(title)),
+      }));
+    }
+    return this.pack(
+      kinds,
+      this.titles().map((title) => this.cardFromTitle(title)),
+      format,
+    );
   });
 
   readonly limits = LIMITS;
@@ -119,6 +161,8 @@ export class CatalogPage {
   onQuery(event: Event): void {
     const value = (event as CustomEvent<{ value?: string | null }>).detail.value ?? '';
     this.query.set(value.slice(0, LIMITS.search.max));
+    this.notice.set('');
+    this.savedIds.set({});
     this.searched.set(false);
     if (this.nameTimer) {
       clearTimeout(this.nameTimer);
@@ -134,15 +178,9 @@ export class CatalogPage {
   }
 
   onYear(event: Event): void {
-    const value = (event as CustomEvent<{ value?: string | null }>).detail.value ?? '';
-    const digits = value.replace(/\D/g, '').slice(0, 4);
-    this.year.set(digits);
+    const value = String((event as CustomEvent<{ value?: string | number | null }>).detail.value ?? '');
+    this.year.set(value === 'undefined' ? '' : value);
     this.searched.set(false);
-    const parsed = parseYearInput(digits);
-    if (parsed.state === 'invalid') {
-      this.error.set(parsed.error);
-      return;
-    }
     void this.load();
   }
 
@@ -170,37 +208,52 @@ export class CatalogPage {
     this.format.set(value === 'movie' || value === 'series' || value === 'program' ? value : 'all');
   }
 
-  async search(event?: Event): Promise<void> {
+  async save(event?: Event): Promise<void> {
     event?.preventDefault();
-    if (this.busy()) {
+    const hits = this.visibleHits();
+    if (this.busy() || hits.length === 0) {
       return;
     }
     this.error.set('');
-    if (this.nameTimer) {
-      clearTimeout(this.nameTimer);
-    }
-    const gen = ++this.loadGen;
+    this.notice.set('');
     this.busy.set(true);
-    this.loading.set(true);
-    try {
-      const result = await this.titlesApi.searchAndStore(this.query());
-      if (gen !== this.loadGen) {
-        return;
-      }
-      this.searched.set(true);
-      if (!result.ok) {
-        this.error.set(result.error);
-        this.focusError();
-        return;
-      }
-      this.error.set('');
-      this.titles.set(result.titles);
-    } finally {
-      this.busy.set(false);
-      if (gen === this.loadGen) {
-        this.loading.set(false);
-      }
+    const result = await this.titlesApi.storeHits(hits);
+    this.busy.set(false);
+    if (!result.ok) {
+      this.error.set(result.error);
+      this.focusError();
+      return;
     }
+    const ids: Record<string, string> = {};
+    for (const title of result.titles) {
+      ids[`${title.mediaType}:${title.tmdbId}`] = title.id;
+    }
+    this.savedIds.set(ids);
+    this.notice.set('Listo. Quedó guardado en la cartelera.');
+  }
+
+  async openCard(event: Event, card: CatalogCard): Promise<void> {
+    if (card.id) {
+      return;
+    }
+    event.preventDefault();
+    const hit = this.hits().find(
+      (item) => item.tmdbId === card.tmdbId && item.mediaType === card.mediaType,
+    );
+    if (!hit) {
+      return;
+    }
+    this.busy.set(true);
+    const result = await this.titlesApi.storeHit(hit);
+    this.busy.set(false);
+    if (!result.ok) {
+      this.error.set(result.error);
+      this.focusError();
+      return;
+    }
+    const key = `${hit.mediaType}:${hit.tmdbId}`;
+    this.savedIds.update((ids) => ({ ...ids, [key]: result.title.id }));
+    await this.router.navigate(['/tabs/title', result.title.id]);
   }
 
   private async load(): Promise<void> {
@@ -217,6 +270,23 @@ export class CatalogPage {
 
     const gen = ++this.loadGen;
     this.loading.set(true);
+    if (this.query().trim().length >= LIMITS.search.min) {
+      const result = await this.titlesApi.searchLive(this.query());
+      if (gen !== this.loadGen) {
+        return;
+      }
+      this.loading.set(false);
+      if (!result.ok) {
+        this.hits.set([]);
+        this.error.set(result.error);
+        this.focusError();
+        return;
+      }
+      this.error.set('');
+      this.hits.set(result.hits);
+      return;
+    }
+    this.hits.set([]);
     if (!this.narrowed() && !this.searched()) {
       const boards = await this.titlesApi.loadBoards();
       if (gen !== this.loadGen) {
@@ -232,10 +302,25 @@ export class CatalogPage {
         this.error.set(boards.error);
       }
     }
+    if (parsedYear.state === 'ok') {
+      const discovered = await this.titlesApi.discoverYear(parsedYear.year);
+      if (gen !== this.loadGen) {
+        return;
+      }
+      this.loading.set(false);
+      if (!discovered.ok) {
+        this.error.set(discovered.error);
+        this.focusError();
+        return;
+      }
+      this.error.set('');
+      this.titles.set(this.arrange(discovered.titles));
+      return;
+    }
     const result = await this.titlesApi.listCatalog({
       name: this.query(),
       genre: this.genre(),
-      year: parsedYear.state === 'ok' ? parsedYear.year : null,
+      year: null,
       minScore: this.minScore(),
       sort: this.sort(),
       scoreKind: this.scoreKind(),
@@ -254,6 +339,82 @@ export class CatalogPage {
       this.error.set('');
     }
     this.titles.set(result.titles);
+  }
+
+  private pack(
+    kinds: { id: 'movie' | 'series' | 'program'; label: string }[],
+    cards: CatalogCard[],
+    format: 'all' | 'movie' | 'series' | 'program',
+  ) {
+    return kinds
+      .filter((kind) => format === 'all' || format === kind.id)
+      .map((kind) => ({
+        id: kind.id,
+        label: kind.label,
+        hint: '',
+        cards: cards.filter((card) => showFormat(card) === kind.id),
+      }))
+      .filter((section) => section.cards.length > 0);
+  }
+
+  private cardFromTitle(title: Title): CatalogCard {
+    return {
+      key: title.id,
+      id: title.id,
+      tmdbId: title.tmdbId,
+      mediaType: title.mediaType,
+      name: title.name,
+      overview: title.overview,
+      releaseDate: title.releaseDate,
+      posterUrl: title.posterUrl,
+      genres: title.genres,
+      audienceScore: title.audienceScore,
+      criticScore: title.criticScore,
+    };
+  }
+
+  private cardFromHit(hit: SearchHit): CatalogCard {
+    const key = `${hit.mediaType}:${hit.tmdbId}`;
+    return {
+      key,
+      id: this.savedIds()[key] ?? null,
+      tmdbId: hit.tmdbId,
+      mediaType: hit.mediaType,
+      name: hit.name,
+      overview: hit.overview,
+      releaseDate: hit.releaseDate,
+      posterUrl: hit.posterUrl,
+      genres: hit.genres,
+      audienceScore: null,
+      criticScore: null,
+    };
+  }
+
+  private arrange(titles: Title[]): Title[] {
+    const name = normalizeKey(this.query());
+    let next = titles;
+    if (name) {
+      next = next.filter((title) => normalizeKey(title.name).includes(name));
+    }
+    if (this.genre()) {
+      next = next.filter((title) => matchesGenre(title.genres, this.genre()));
+    }
+    const minScore = this.minScore();
+    if (minScore > 0) {
+      next = next.filter((title) => this.scoreOf(title) >= minScore);
+    }
+    if (this.sort() === 'date') {
+      return [...next].sort((a, b) => (b.releaseDate ?? '').localeCompare(a.releaseDate ?? ''));
+    }
+    return [...next].sort((a, b) => this.scoreOf(b) - this.scoreOf(a));
+  }
+
+  private scoreOf(title: Title): number {
+    const own = this.scoreKind() === 'critic' ? title.criticScore : title.audienceScore;
+    if (own !== null) {
+      return own;
+    }
+    return title.tmdbScore === null ? -1 : title.tmdbScore * 10;
   }
 
   private focusError(): void {
