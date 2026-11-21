@@ -23,7 +23,7 @@ create table if not exists public.titles (
   poster_url text,
   backdrop_url text,
   genres text[] not null default '{}',
-  cast jsonb not null default '[]'::jsonb,
+  "cast" jsonb not null default '[]'::jsonb,
   runtime_minutes integer,
   original_language text,
   tmdb_score numeric(4, 1),
