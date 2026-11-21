@@ -5,35 +5,100 @@
 </ion-header>
 
 <ion-content>
-  <form class="ion-padding stack" (ngSubmit)="search()">
-    <ion-searchbar
-      [value]="query()"
-      placeholder="Nombre de la película o serie"
-      [debounce]="0"
-      (ionInput)="onQuery($event)"
-      (keyup.enter)="search()"
-    ></ion-searchbar>
-    <ion-button expand="block" type="submit" [disabled]="busy()">
-      {{ busy() ? 'Buscando…' : 'Buscar y guardar' }}
-    </ion-button>
-    <p class="muted">Si el título no está en tu base, se guarda al buscar.</p>
+  <div class="ion-padding stack">
+    <form (submit)="search($event)">
+      <ion-searchbar
+        [value]="query()"
+        placeholder="Nombre de la película o serie"
+        [debounce]="0"
+        (ionInput)="onQuery($event)"
+        (keyup.enter)="search()"
+      ></ion-searchbar>
+      <ion-button class="ion-margin-top" expand="block" type="submit" [disabled]="busy()">
+        {{ busy() ? 'Buscando…' : 'Buscar y guardar' }}
+      </ion-button>
+    </form>
+
+    <ion-select
+      label="Género"
+      labelPlacement="stacked"
+      interface="popover"
+      fill="outline"
+      [value]="genre()"
+      (ionChange)="onGenre($event)"
+    >
+      <ion-select-option value="">Todos</ion-select-option>
+      @for (item of genres; track item.id) {
+        <ion-select-option [value]="item.id">{{ item.label }}</ion-select-option>
+      }
+    </ion-select>
+
+    <ion-input
+      label="Año de estreno"
+      labelPlacement="stacked"
+      type="number"
+      inputmode="numeric"
+      fill="outline"
+      [value]="year()"
+      (ionInput)="onYear($event)"
+    ></ion-input>
+
+    <div>
+      <ion-range
+        aria-label="Puntaje mínimo"
+        [min]="0"
+        [max]="100"
+        [pin]="true"
+        [value]="minScore()"
+        (ionChange)="onMin($event)"
+      ></ion-range>
+      <p class="muted">
+        Mínimo {{ scoreKind() === 'critic' ? 'de críticos' : 'del público' }}: {{ minScore() }}
+      </p>
+    </div>
+
+    <ion-segment [value]="scoreKind()" (ionChange)="onScoreKind($event)" aria-label="Qué puntaje usar">
+      <ion-segment-button value="audience">
+        <ion-label>Público</ion-label>
+      </ion-segment-button>
+      <ion-segment-button value="critic">
+        <ion-label>Críticos</ion-label>
+      </ion-segment-button>
+    </ion-segment>
+
+    <ion-segment [value]="sort()" (ionChange)="onSort($event)" aria-label="Orden">
+      <ion-segment-button value="score">
+        <ion-label>Puntaje</ion-label>
+      </ion-segment-button>
+      <ion-segment-button value="date">
+        <ion-label>Fecha</ion-label>
+      </ion-segment-button>
+    </ion-segment>
+
+    <p class="muted">El puntaje mínimo y el orden usan los promedios de reseñas, no el de TMDB.</p>
     @if (error()) {
       <ion-text color="danger">{{ error() }}</ion-text>
     }
-  </form>
+  </div>
 
-  @if (busy()) {
+  @if (loading() || busy()) {
     <div class="ion-text-center ion-padding">
       <ion-spinner name="crescent"></ion-spinner>
     </div>
   } @else if (titles().length === 0) {
     <p class="ion-padding ion-text-center muted">
-      {{ searched() ? 'No hubo resultados.' : 'Nada guardado todavía.' }}
+      {{
+        searched()
+          ? 'No hubo resultados.'
+          : filtering()
+            ? 'Ningún título coincide con esos filtros.'
+            : 'Nada guardado todavía.'
+      }}
     </p>
   } @else {
     <ion-list lines="full">
       @for (title of titles(); track title.id) {
-        <ion-item>
+        <ion-item button [routerLink]="['/tabs/title', title.id]">
           <ion-thumbnail slot="start">
             @if (title.posterUrl) {
               <img [src]="title.posterUrl" [alt]="'Carátula de ' + title.name" />
@@ -41,7 +106,8 @@
           </ion-thumbnail>
           <ion-label>
             <h2>{{ title.name }}</h2>
-            <p>{{ kind(title) }} · {{ year(title.releaseDate) }}</p>
+            <p>{{ kind(title.mediaType) }} · {{ yearText(title.releaseDate) }}</p>
+            <p>Público {{ scoreText(title.audienceScore) }} · Críticos {{ scoreText(title.criticScore) }}</p>
           </ion-label>
         </ion-item>
       }

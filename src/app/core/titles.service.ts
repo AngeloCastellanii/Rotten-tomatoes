@@ -1,7 +1,8 @@
 import { Injectable } from '@angular/core';
 
+import { matchesGenre } from './genres';
 import { mapTitle } from './mappers';
-import type { ActionResult, MediaType, Title } from './models';
+import type { ActionResult, CatalogFilters, MediaType, Title } from './models';
 import { environment } from '../../environments/environment';
 import { isTmdbConfigured, supabase } from './supabase';
 import { normalizeText } from './text';
@@ -17,16 +18,47 @@ interface TmdbListItem {
 
 @Injectable({ providedIn: 'root' })
 export class TitlesService {
-  async listRecent(): Promise<ActionResult<{ titles: Title[] }>> {
-    const { data, error } = await supabase
-      .from('titles')
-      .select('*')
-      .order('updated_at', { ascending: false })
-      .limit(40);
+  async listCatalog(filters: CatalogFilters): Promise<ActionResult<{ titles: Title[] }>> {
+    const scoreColumn = filters.scoreKind === 'critic' ? 'critic_score' : 'audience_score';
+    let request = supabase.from('titles').select('*');
+    const name = normalizeText(filters.name).replace(/[%_,]/g, '');
+    if (name) {
+      request = request.ilike('name', `%${name}%`);
+    }
+    if (filters.year) {
+      const year = String(filters.year);
+      request = request
+        .gte('release_date', `${year}-01-01`)
+        .lte('release_date', `${year}-12-31`);
+    }
+    if (filters.minScore > 0) {
+      request = request.gte(scoreColumn, filters.minScore);
+    }
+    request =
+      filters.sort === 'date'
+        ? request.order('release_date', { ascending: false, nullsFirst: false })
+        : request.order(scoreColumn, { ascending: false, nullsFirst: false });
+
+    const { data, error } = await request.limit(80);
     if (error) {
       return { ok: false, error: 'No se pudo leer el catálogo.' };
     }
-    return { ok: true, titles: (data ?? []).flatMap((row) => mapTitle(row) ?? []) };
+    const titles = (data ?? [])
+      .flatMap((row) => mapTitle(row) ?? [])
+      .filter((title) => matchesGenre(title.genres, filters.genre));
+    return { ok: true, titles };
+  }
+
+  async getById(id: string): Promise<ActionResult<{ title: Title }>> {
+    const { data, error } = await supabase.from('titles').select('*').eq('id', id).maybeSingle();
+    if (error || !data) {
+      return { ok: false, error: 'No se encontró el título.' };
+    }
+    const title = mapTitle(data);
+    if (!title) {
+      return { ok: false, error: 'No se encontró el título.' };
+    }
+    return { ok: true, title };
   }
 
   async searchAndStore(rawQuery: string): Promise<ActionResult<{ titles: Title[] }>> {

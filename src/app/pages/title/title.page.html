@@ -1,0 +1,141 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-back-button defaultHref="/tabs/catalog" text="Cartelera"></ion-back-button>
+    </ion-buttons>
+    <ion-title>{{ title()?.name || 'Ficha' }}</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content>
+  @if (loading()) {
+    <div class="ion-text-center ion-padding">
+      <ion-spinner name="crescent"></ion-spinner>
+    </div>
+  } @else if (!title()) {
+    <p class="ion-padding ion-text-center">{{ error() || 'No se encontró el título.' }}</p>
+  } @else {
+    @if (title()?.posterUrl; as poster) {
+      <img class="poster" [src]="poster" [alt]="'Carátula de ' + title()?.name" />
+    } @else {
+      <p class="ion-padding muted">Sin carátula.</p>
+    }
+
+    <div class="ion-padding stack">
+      <div>
+        <h1 class="sheet-title">{{ title()?.name }}</h1>
+        <p class="muted">
+          {{ kind(title()!.mediaType) }} · {{ dateText(title()!.releaseDate) }} ·
+          {{ runtimeText(title()!.runtimeMinutes) }} · {{ languageText(title()!.originalLanguage) }}
+        </p>
+        @if (title()!.genres.length) {
+          <p>{{ title()!.genres.join(' · ') }}</p>
+        }
+      </div>
+
+      <div class="score-row">
+        <div class="score-card">
+          <span class="score-value">{{ scoreText(title()!.audienceScore) }}</span>
+          <span class="muted">Público · {{ title()!.audienceCount }}</span>
+        </div>
+        <div class="score-card">
+          <span class="score-value">{{ scoreText(title()!.criticScore) }}</span>
+          <span class="muted">Críticos · {{ title()!.criticCount }}</span>
+        </div>
+        <div class="score-card">
+          <span class="score-value">{{ scoreText(title()!.tmdbScore) }}</span>
+          <span class="muted">TMDB</span>
+        </div>
+      </div>
+
+      <section>
+        <h2 class="section-title">Sinopsis</h2>
+        <p>{{ title()!.overview || 'Sin sinopsis.' }}</p>
+      </section>
+
+      <section>
+        <h2 class="section-title">Reparto</h2>
+        @if (title()!.cast.length === 0) {
+          <p class="muted">Sin reparto.</p>
+        } @else {
+          <ion-list lines="full">
+            @for (person of title()!.cast; track $index) {
+              <ion-item>
+                @if (person.profileUrl) {
+                  <ion-thumbnail slot="start">
+                    <img [src]="person.profileUrl" [alt]="person.name" />
+                  </ion-thumbnail>
+                }
+                <ion-label>
+                  <h3>{{ person.name }}</h3>
+                  <p>{{ person.character || 'Reparto' }}</p>
+                </ion-label>
+              </ion-item>
+            }
+          </ion-list>
+        }
+      </section>
+
+      <section>
+        <h2 class="section-title">Tu reseña</h2>
+        <p class="muted">
+          {{
+            auth.user()?.role === 'critic'
+              ? 'Cuenta para el puntaje de críticos.'
+              : 'Cuenta para el puntaje del público.'
+          }}
+        </p>
+        <ion-textarea
+          label="Opinión"
+          labelPlacement="stacked"
+          fill="outline"
+          [autoGrow]="true"
+          [maxlength]="1000"
+          [value]="body()"
+          (ionInput)="onBody($event)"
+        ></ion-textarea>
+        <ion-range
+          aria-label="Puntaje"
+          [min]="0"
+          [max]="100"
+          [pin]="true"
+          [value]="score()"
+          (ionChange)="onScore($event)"
+        ></ion-range>
+        <p class="muted">Puntaje: {{ score() }}</p>
+        @if (error()) {
+          <ion-text color="danger">{{ error() }}</ion-text>
+        }
+        @if (notice()) {
+          <ion-text color="success">{{ notice() }}</ion-text>
+        }
+        <ion-button expand="block" (click)="save()" [disabled]="busy()">
+          {{ ownReview() ? 'Guardar reseña' : 'Publicar reseña' }}
+        </ion-button>
+        @if (ownReview()) {
+          <ion-button expand="block" color="danger" fill="clear" (click)="confirmDelete()">
+            Borrar reseña
+          </ion-button>
+        }
+      </section>
+
+      <section>
+        <h2 class="section-title">Reseñas</h2>
+        @if (reviews().length === 0) {
+          <p class="muted">Todavía no hay reseñas.</p>
+        } @else {
+          <ion-list lines="full">
+            @for (review of reviews(); track review.id) {
+              <ion-item>
+                <ion-label>
+                  <h3>{{ review.authorName }} · {{ roleText(review.authorRole) }}</h3>
+                  <p>{{ review.score }} · {{ review.body }}</p>
+                </ion-label>
+              </ion-item>
+            }
+          </ion-list>
+        }
+      </section>
+    </div>
+  }
+</ion-content>

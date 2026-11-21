@@ -52,6 +52,31 @@ export function validateRole(value: string): value is UserRole {
   return value === 'audience' || value === 'critic';
 }
 
+export function validateReviewBody(value: string): ValidationResult {
+  const body = normalizeText(value);
+  if (body.length < LIMITS.review.min) {
+    return { ok: false, error: 'Escribe tu opinión.' };
+  }
+  if (body.length > LIMITS.review.max) {
+    return { ok: false, error: `La opinión no puede superar ${LIMITS.review.max} caracteres.` };
+  }
+  return { ok: true };
+}
+
+export function validateReviewScore(value: number): ValidationResult {
+  if (!Number.isInteger(value) || value < LIMITS.score.min || value > LIMITS.score.max) {
+    return { ok: false, error: 'El puntaje debe ser un número entero entre 0 y 100.' };
+  }
+  return { ok: true };
+}
+
+export function validateYear(value: number): ValidationResult {
+  if (!Number.isInteger(value) || value < LIMITS.year.min || value > LIMITS.year.max) {
+    return { ok: false, error: `El año debe estar entre ${LIMITS.year.min} y ${LIMITS.year.max}.` };
+  }
+  return { ok: true };
+}
+
 export function validateSearch(value: string): ValidationResult {
   const query = normalizeText(value);
   if (query.length < LIMITS.search.min) {

@@ -2,6 +2,19 @@ export type UserRole = 'audience' | 'critic';
 
 export type MediaType = 'movie' | 'tv';
 
+export type GenreId = '' | 'accion' | 'drama' | 'misterio';
+
+export type CatalogSort = 'score' | 'date';
+
+export interface CatalogFilters {
+  name: string;
+  genre: GenreId;
+  year: number | null;
+  minScore: number;
+  sort: CatalogSort;
+  scoreKind: UserRole;
+}
+
 export interface Profile {
   id: string;
   name: string;
@@ -37,6 +50,20 @@ export interface Title {
   criticCount: number;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface Review {
+  id: string;
+  titleId: string;
+  authorId: string;
+  authorName: string;
+  authorRole: UserRole;
+  body: string;
+  score: number;
+  createdAt: string;
+  updatedAt: string;
+  titleName: string | null;
+  posterUrl: string | null;
 }
 
 export type ActionResult<T extends object | undefined = undefined> = [T] extends [undefined]

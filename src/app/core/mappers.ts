@@ -1,4 +1,11 @@
-import type { CastMember, MediaType, Profile, Title, UserRole } from './models';
+import type { CastMember, MediaType, Profile, Review, Title, UserRole } from './models';
+
+function firstRecord(value: unknown): Record<string, unknown> | null {
+  if (Array.isArray(value)) {
+    return asRecord(value[0]);
+  }
+  return asRecord(value);
+}
 
 function asRecord(value: unknown): Record<string, unknown> | null {
   if (!value || typeof value !== 'object') {
@@ -101,5 +108,34 @@ export function mapTitle(value: unknown): Title | null {
     criticCount: numberOrNull(row['critic_count']) ?? 0,
     createdAt: text(row['created_at']),
     updatedAt: text(row['updated_at']),
+  };
+}
+
+export function mapReview(value: unknown): Review | null {
+  const row = asRecord(value);
+  if (!row || typeof row['id'] !== 'string' || typeof row['title_id'] !== 'string') {
+    return null;
+  }
+  const score = numberOrNull(row['score']);
+  if (score === null) {
+    return null;
+  }
+  const profile = firstRecord(row['profiles']);
+  const title = firstRecord(row['titles']);
+  const authorName = text(profile?.['name']).trim();
+  const titleName = text(title?.['name']).trim();
+  const posterUrl = text(title?.['poster_url']).trim();
+  return {
+    id: row['id'],
+    titleId: row['title_id'],
+    authorId: text(row['author_id']),
+    authorName: authorName || 'Usuario',
+    authorRole: role(profile?.['role']),
+    body: text(row['body']),
+    score,
+    createdAt: text(row['created_at']),
+    updatedAt: text(row['updated_at']),
+    titleName: titleName || null,
+    posterUrl: posterUrl || null,
   };
 }

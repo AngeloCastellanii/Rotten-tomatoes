@@ -12,6 +12,9 @@ Stack: Ionic 9, Angular 22, Capacitor 8. Solo pnpm. `.npmrc` con `node-linker=ho
 - Esquema Supabase (`supabase/schema.sql`), cliente y `.env` volcado al compilar. Commit: `Definir esquema Supabase de perfiles, titulos y resenas`.
 - Registro, sesión, perfil con rol público/crítico, tema claro/oscuro y borrado de cuenta. Commit: `Implementar registro, sesion y perfil con rol`.
 - Cartelera: buscar en TMDB y guardar el título si no está en la base. Commit: `Guardar en la base las peliculas y series traidas de TMDB`.
+- Filtros de nombre, género (acción, drama, misterio), año y puntaje mínimo. Orden por puntaje del público, de críticos o por fecha.
+- Ficha con carátula, sinopsis, fecha, reparto, duración, idioma y los tres puntajes.
+- Reseñas: una por usuario y título, crear, editar y borrar. El rol separa el promedio del público y el de críticos.
 
 Antes de probar: crea un proyecto Supabase nuevo, corre `supabase/schema.sql`, desactiva Confirm email, y llena `.env` con `SUPABASE_URL`, `SUPABASE_ANON_KEY` y `TMDB_API_KEY`. Luego `pnpm start`.
 
@@ -62,15 +65,9 @@ La ruta del proyecto tiene espacios. El `assembleDebug` se lanza desde una unida
 
 ## Siguiente
 
-1. Filtrar y ordenar el catálogo por nombre, género, fecha y puntaje.
-2. Ficha con sinopsis, reparto, carátula y ambos puntajes.
-3. Reseñas de público y de críticos.
-4. APK de Android.
+1. APK de Android.
 
 ```bash
-git commit -m "Filtrar y ordenar el catalogo por nombre, genero, fecha y puntaje"
-git commit -m "Mostrar ficha con sinopsis, reparto, caratula y ambos puntajes"
-git commit -m "Implementar resenas de publico y de criticos"
 git commit -m "Generar APK de Android"
 ```
 

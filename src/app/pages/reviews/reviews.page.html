@@ -4,6 +4,37 @@
   </ion-toolbar>
 </ion-header>
 
-<ion-content class="ion-padding">
-  <p class="muted">Todavía no escribes reseñas.</p>
+<ion-content>
+  @if (loading()) {
+    <div class="ion-text-center ion-padding">
+      <ion-spinner name="crescent"></ion-spinner>
+    </div>
+  } @else if (error()) {
+    <p class="ion-padding ion-text-center">
+      <ion-text color="danger">{{ error() }}</ion-text>
+    </p>
+  } @else if (reviews().length === 0) {
+    <p class="ion-padding ion-text-center muted">Todavía no escribes reseñas.</p>
+  } @else {
+    <ion-list lines="full">
+      @for (review of reviews(); track review.id) {
+        <ion-item>
+          @if (review.posterUrl) {
+            <ion-thumbnail slot="start">
+              <img [src]="review.posterUrl" [alt]="'Carátula de ' + review.titleName" />
+            </ion-thumbnail>
+          }
+          <ion-label>
+            <h2>{{ review.titleName || 'Título' }}</h2>
+            <p>{{ roleText(review.authorRole) }} · {{ review.score }}</p>
+            <p>{{ review.body }}</p>
+          </ion-label>
+          <div slot="end" class="row-actions">
+            <ion-button fill="clear" [routerLink]="['/tabs/title', review.titleId]">Editar</ion-button>
+            <ion-button fill="clear" color="danger" (click)="confirmDelete(review)">Borrar</ion-button>
+          </div>
+        </ion-item>
+      }
+    </ion-list>
+  }
 </ion-content>
