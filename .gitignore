@@ -39,6 +39,7 @@ pnpm-debug.log*
 # local env
 .env
 .env*.local
+src/environments/environment.generated.ts
 
 # Android
 /android/.gradle
