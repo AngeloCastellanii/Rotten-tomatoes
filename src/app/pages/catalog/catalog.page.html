@@ -29,7 +29,7 @@
       <ion-select
         label="Género"
         labelPlacement="stacked"
-        interface="popover"
+        interface="modal"
         fill="outline"
         [value]="genre()"
         (ionChange)="onGenre($event)"
@@ -124,6 +124,9 @@
             <div>
               <h2>{{ title.name }}</h2>
               <p class="muted">{{ kind(title.mediaType) }} · {{ yearText(title.releaseDate) }}</p>
+              @if (title.genres.length) {
+                <p class="genre-line">{{ title.genres.join(' · ') }}</p>
+              }
               <p class="score-line">
                 <span class="score-pill score-pill-audience">Público {{ scoreText(title.audienceScore) }}</span>
                 <span class="score-pill score-pill-critic">Críticos {{ scoreText(title.criticScore) }}</span>

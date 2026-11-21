@@ -64,7 +64,8 @@ describe('parametros de entrada', () => {
     expect(clampScore(88.2)).toBe(88);
 
     expect(asGenre('accion')).toBe('accion');
-    expect(asGenre('comedia')).toBe('');
+    expect(asGenre('comedia')).toBe('comedia');
+    expect(asGenre('no-existe')).toBe('');
     expect(clipText('  hola   mundo  ', 4)).toBe('hola');
     expect(isUuid(TITLE_ID)).toBe(true);
     expect(isUuid('no-es-uuid')).toBe(false);
@@ -74,6 +75,8 @@ describe('parametros de entrada', () => {
     expect(matchesGenre(['Acción', 'Aventura'], 'accion')).toBe(true);
     expect(matchesGenre(['Action'], 'accion')).toBe(true);
     expect(matchesGenre(['Comedia'], 'misterio')).toBe(false);
+    expect(matchesGenre(['Ciencia ficción', 'Aventura'], 'ciencia-ficcion')).toBe(true);
+    expect(matchesGenre(['Thriller'], 'suspense')).toBe(true);
     expect(scoreLabel(null)).toBe('Sin puntaje');
     expect(scoreLabel(8.5)).toBe('8.5');
     expect(dateLabel(null)).toBe('Sin fecha');

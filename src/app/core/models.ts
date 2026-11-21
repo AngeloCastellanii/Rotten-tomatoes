@@ -2,7 +2,7 @@ export type UserRole = 'audience' | 'critic';
 
 export type MediaType = 'movie' | 'tv';
 
-export type GenreId = '' | 'accion' | 'drama' | 'misterio';
+export type GenreId = string;
 
 export type CatalogSort = 'score' | 'date';
 

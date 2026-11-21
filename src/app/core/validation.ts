@@ -1,6 +1,8 @@
 import { LIMITS } from './limits';
-import type { GenreId, UserRole } from './models';
+import type { UserRole } from './models';
 import { normalizeText } from './text';
+
+export { asGenre } from './genres';
 
 export interface ValidationResult {
   ok: boolean;
@@ -127,10 +129,6 @@ const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-
 
 export function isUuid(value: string): boolean {
   return UUID_REGEX.test(value);
-}
-
-export function asGenre(value: string): GenreId {
-  return value === 'accion' || value === 'drama' || value === 'misterio' ? value : '';
 }
 
 export function validateSearch(value: string): ValidationResult {
