@@ -132,11 +132,25 @@ ion-searchbar {
 
 .title-card {
   display: flex;
-  gap: 12px;
+  flex-direction: column;
   min-height: 48px;
-  padding: 12px;
+  padding: 0;
+  overflow: hidden;
   color: inherit;
   text-decoration: none;
+}
+
+.card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+}
+
+.copy {
+  margin: 0;
+  line-height: 1.5;
+  white-space: pre-wrap;
 }
 
 .title-card:active {
@@ -147,14 +161,88 @@ ion-searchbar {
 .review-card h2,
 .sheet-title {
   margin: 0;
-  font-size: 1.125rem;
+  font-size: 1.25rem;
   line-height: 1.3;
 }
 
+.hero {
+  position: relative;
+  min-height: 180px;
+  background: var(--rp-poster);
+}
+
+.hero-photo {
+  display: block;
+  width: 100%;
+  height: 240px;
+  object-fit: cover;
+}
+
+.hero-row {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  padding: 16px;
+}
+
+.hero-copy {
+  min-width: 0;
+  padding-bottom: 8px;
+}
+
+.cast-rail {
+  display: flex;
+  gap: 12px;
+  margin: 12px 0 0;
+  padding: 0 0 8px;
+  overflow-x: auto;
+  list-style: none;
+  scroll-snap-type: x mandatory;
+}
+
+.cast-rail li {
+  display: flex;
+  flex: 0 0 112px;
+  flex-direction: column;
+  gap: 4px;
+  scroll-snap-align: start;
+}
+
+.cast-photo {
+  width: 112px;
+  height: 148px;
+  overflow: hidden;
+  border-radius: 8px;
+  background: var(--rp-poster);
+}
+
+.cast-photo img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
 .title-card p,
-.review-card p,
+.review-card p {
+  margin: 0;
+  line-height: 1.4;
+}
+
 .genre-line {
-  margin: 4px 0 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.genre-chip {
+  padding: 4px 8px;
+  border: 1px solid var(--rp-border);
+  border-radius: 8px;
+  background: var(--rp-card);
   line-height: 1.4;
 }
 
@@ -170,10 +258,16 @@ ion-searchbar {
   flex: none;
 }
 
-.poster-frame-hero {
-  width: min(100%, 280px);
+.poster-frame-cover {
+  width: 100%;
   aspect-ratio: 2 / 3;
-  margin-inline: auto;
+}
+
+.poster-frame-hero {
+  width: 112px;
+  flex: none;
+  aspect-ratio: 2 / 3;
+  border-radius: 8px;
 }
 
 .poster-frame img {

@@ -18,67 +18,77 @@
       <p class="muted">{{ error() || 'Ese título no está en la cartelera.' }}</p>
     </div>
   } @else {
-    <article class="detail">
-      <div class="poster-frame poster-frame-hero">
-        @if (title()?.posterUrl; as poster) {
-          <img [src]="poster" [alt]="'Carátula de ' + title()?.name" (error)="hideBroken($event)" />
+    <article>
+      <div class="hero">
+        @if (title()?.backdropUrl; as backdrop) {
+          <img class="hero-photo" [src]="backdrop" alt="" (error)="hideBroken($event)" />
         }
-        <span class="poster-fallback">{{ kind(title()!.mediaType) }}</span>
-      </div>
-
-      <header>
-        <h1 class="sheet-title">{{ title()?.name }}</h1>
-        <p class="muted">
-          {{ kind(title()!.mediaType) }} · {{ dateText(title()!.releaseDate) }} ·
-          {{ runtimeText(title()!.runtimeMinutes) }} · {{ languageText(title()!.originalLanguage) }}
-        </p>
-        @if (title()!.genres.length) {
-          <p>{{ title()!.genres.join(' · ') }}</p>
-        }
-      </header>
-
-      <div class="score-row">
-        <div class="score-card">
-          <span class="score-value score-pill-audience">{{ scoreText(title()!.audienceScore) }}</span>
-          <span class="muted">Público · {{ title()!.audienceCount }}</span>
-        </div>
-        <div class="score-card">
-          <span class="score-value score-pill-critic">{{ scoreText(title()!.criticScore) }}</span>
-          <span class="muted">Críticos · {{ title()!.criticCount }}</span>
-        </div>
-        <div class="score-card">
-          <span class="score-value">{{ scoreText(title()!.tmdbScore) }}</span>
-          <span class="muted">TMDB</span>
-        </div>
-      </div>
-
-      <section class="detail-block">
-        <h2 class="section-title">Sinopsis</h2>
-        <p>{{ title()!.overview || 'Sin sinopsis.' }}</p>
-      </section>
-
-      <section>
-        <h2 class="section-title">Reparto</h2>
-        @if (title()!.cast.length === 0) {
-          <p class="muted">Sin reparto.</p>
-        } @else {
-          <ion-list lines="full">
-            @for (person of title()!.cast; track person.name) {
-              <ion-item>
-                @if (person.profileUrl) {
-                  <ion-thumbnail slot="start">
-                    <img [src]="person.profileUrl" [alt]="''" (error)="hideBroken($event)" />
-                  </ion-thumbnail>
-                }
-                <ion-label>
-                  <h3>{{ person.name }}</h3>
-                  <p>{{ person.character || 'Reparto' }}</p>
-                </ion-label>
-              </ion-item>
+        <div class="hero-row">
+          <div class="poster-frame poster-frame-hero">
+            @if (title()?.posterUrl; as poster) {
+              <img [src]="poster" [alt]="'Carátula de ' + title()?.name" (error)="hideBroken($event)" />
             }
-          </ion-list>
+            <span class="poster-fallback">{{ kind(title()!.mediaType) }}</span>
+          </div>
+          <header class="hero-copy">
+            <h1 class="sheet-title">{{ title()?.name }}</h1>
+            <p class="muted">
+              {{ kind(title()!.mediaType) }} · {{ dateText(title()!.releaseDate) }} ·
+              {{ runtimeText(title()!.runtimeMinutes) }} · {{ languageText(title()!.originalLanguage) }}
+            </p>
+          </header>
+        </div>
+      </div>
+
+      <div class="detail">
+        @if (title()!.genres.length) {
+          <ul class="genre-line">
+            @for (genre of title()!.genres; track genre) {
+              <li class="genre-chip">{{ genre }}</li>
+            }
+          </ul>
         }
-      </section>
+
+        <div class="score-row">
+          <div class="score-card">
+            <span class="score-value score-pill-audience">{{ scoreText(title()!.audienceScore) }}</span>
+            <span class="muted">Público · {{ title()!.audienceCount }}</span>
+          </div>
+          <div class="score-card">
+            <span class="score-value score-pill-critic">{{ scoreText(title()!.criticScore) }}</span>
+            <span class="muted">Críticos · {{ title()!.criticCount }}</span>
+          </div>
+          <div class="score-card">
+            <span class="score-value">{{ scoreText(title()!.tmdbScore) }}</span>
+            <span class="muted">TMDB</span>
+          </div>
+        </div>
+
+        <section class="detail-block">
+          <h2 class="section-title">Sinopsis</h2>
+          <p class="copy">{{ title()!.overview || 'Sin sinopsis.' }}</p>
+        </section>
+
+        <section>
+          <h2 class="section-title">Reparto</h2>
+          @if (title()!.cast.length === 0) {
+            <p class="muted">Sin reparto.</p>
+          } @else {
+            <ul class="cast-rail">
+              @for (person of title()!.cast; track $index) {
+                <li>
+                  <div class="cast-photo">
+                    @if (person.profileUrl) {
+                      <img [src]="person.profileUrl" alt="" (error)="hideBroken($event)" />
+                    }
+                  </div>
+                  <strong>{{ person.name }}</strong>
+                  <span class="muted">{{ person.character || 'Reparto' }}</span>
+                </li>
+              }
+            </ul>
+          }
+        </section>
 
       <section class="detail-block stack">
         <h2 class="section-title">Tu reseña</h2>
@@ -134,12 +144,13 @@
               <article class="review-card">
                 <h3>{{ review.authorName }}</h3>
                 <p class="muted">{{ roleText(review.authorRole) }} · {{ review.score }}</p>
-                <p>{{ review.body }}</p>
+                <p class="copy">{{ review.body }}</p>
               </article>
             }
           </div>
         }
       </section>
+      </div>
     </article>
   }
 </ion-content>

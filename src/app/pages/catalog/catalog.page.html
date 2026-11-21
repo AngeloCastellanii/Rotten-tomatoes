@@ -115,17 +115,24 @@
       <div class="catalog-grid">
         @for (title of titles(); track title.id) {
           <a class="title-card" [routerLink]="['/tabs/title', title.id]">
-            <div class="poster-frame poster-frame-thumb">
+            <div class="poster-frame poster-frame-cover">
               @if (title.posterUrl) {
                 <img [src]="title.posterUrl" [alt]="'Carátula de ' + title.name" (error)="hideBroken($event)" />
               }
               <span class="poster-fallback">{{ kind(title.mediaType) }}</span>
             </div>
-            <div>
+            <div class="card-body">
               <h2>{{ title.name }}</h2>
               <p class="muted">{{ kind(title.mediaType) }} · {{ yearText(title.releaseDate) }}</p>
               @if (title.genres.length) {
-                <p class="genre-line">{{ title.genres.join(' · ') }}</p>
+                <ul class="genre-line">
+                  @for (genre of title.genres; track genre) {
+                    <li class="genre-chip">{{ genre }}</li>
+                  }
+                </ul>
+              }
+              @if (title.overview) {
+                <p class="copy">{{ title.overview }}</p>
               }
               <p class="score-line">
                 <span class="score-pill score-pill-audience">Público {{ scoreText(title.audienceScore) }}</span>

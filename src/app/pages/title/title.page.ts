@@ -8,12 +8,8 @@ import {
   IonButtons,
   IonContent,
   IonHeader,
-  IonItem,
-  IonLabel,
-  IonList,
   IonRange,
   IonTextarea,
-  IonThumbnail,
   IonTitle,
   IonToolbar,
 } from '@ionic/angular';
@@ -36,10 +32,6 @@ import { clampScore } from '../../core/validation';
     IonBackButton,
     IonTitle,
     IonContent,
-    IonList,
-    IonItem,
-    IonLabel,
-    IonThumbnail,
     IonTextarea,
     IonRange,
     IonButton,
@@ -161,6 +153,11 @@ export class TitlePage {
       return;
     }
     this.title.set(titleResult.title);
+    void this.titlesApi.withFullDetail(titleResult.title).then((full) => {
+      if (this.title()?.id === full.id) {
+        this.title.set(full);
+      }
+    });
     if (!reviewResult.ok) {
       this.error.set(reviewResult.error);
       this.reviews.set([]);

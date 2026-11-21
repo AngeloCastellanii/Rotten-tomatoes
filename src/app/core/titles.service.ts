@@ -220,6 +220,35 @@ export class TitlesService {
     throw new Error(error?.message || 'No se pudo guardar el título.');
   }
 
+  async withFullDetail(title: Title): Promise<Title> {
+    if (!isTmdbConfigured) {
+      return title;
+    }
+    try {
+      const detail = await this.fetchDetail(title.tmdbId, title.mediaType);
+      const row = this.toInsert(title.tmdbId, title.mediaType, detail, null);
+      return {
+        ...title,
+        name: row.name,
+        overview: row.overview,
+        releaseDate: row.release_date,
+        posterUrl: row.poster_url,
+        backdropUrl: row.backdrop_url,
+        genres: row.genres,
+        cast: row.cast.map((person) => ({
+          name: person.name,
+          character: person.character,
+          profileUrl: person.profile_url,
+        })),
+        runtimeMinutes: row.runtime_minutes,
+        originalLanguage: row.original_language,
+        tmdbScore: row.tmdb_score,
+      };
+    } catch {
+      return title;
+    }
+  }
+
   private async findStored(tmdbId: number, mediaType: MediaType): Promise<Title | null> {
     const { data, error } = await supabase
       .from('titles')
@@ -250,7 +279,7 @@ export class TitlesService {
     return body as Record<string, unknown>;
   }
 
-  private toInsert(tmdbId: number, mediaType: MediaType, detail: Record<string, unknown>) {
+  private toInsert(tmdbId: number, mediaType: MediaType, detail: Record<string, unknown>, castLimit: number | null = 40) {
     const name =
       mediaType === 'movie' ? text(detail['title']) : text(detail['name']);
     const release =
@@ -264,7 +293,7 @@ export class TitlesService {
       poster_url: imageUrl(detail['poster_path']),
       backdrop_url: imageUrl(detail['backdrop_path']),
       genres: genreNames(detail['genres']),
-      cast: castMembers(detail['credits']),
+      cast: castMembers(detail['credits'], castLimit),
       runtime_minutes: runtime(mediaType, detail),
       original_language: text(detail['original_language']) || null,
       tmdb_score: roundScore(detail['vote_average']),
@@ -307,6 +336,7 @@ function genreNames(value: unknown): string[] {
 
 function castMembers(
   credits: unknown,
+  limit: number | null,
 ): { name: string; character: string; profile_url: string | null }[] {
   if (!credits || typeof credits !== 'object') {
     return [];
@@ -315,7 +345,8 @@ function castMembers(
   if (!Array.isArray(cast)) {
     return [];
   }
-  return cast.slice(0, 12).flatMap((item) => {
+  const people = limit === null ? cast : cast.slice(0, limit);
+  return people.flatMap((item) => {
     if (!item || typeof item !== 'object') {
       return [];
     }
